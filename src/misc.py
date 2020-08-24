@@ -48,7 +48,7 @@ def scree_plot(ax, pca, n_components_to_plot=8, title=None):
         ax.set_title(title, fontsize=16)
 
 
-def plot_mnist_embedding(ax, X, y, title=None):
+def plot_mnist_embedding(ax, X, y, tight=False, title=None):
     """Plot an embedding of the mnist dataset onto a plane.
     
     Parameters
@@ -61,6 +61,9 @@ def plot_mnist_embedding(ax, X, y, title=None):
       
     y: numpy.array
       The labels of the datapoints.  Should be digits.
+
+    tight: bool
+      If true use a tighter window to plot
       
     title: str
       A title for the plot.
@@ -69,20 +72,24 @@ def plot_mnist_embedding(ax, X, y, title=None):
     X = (X - x_min) / (x_max - x_min)
     y_map = np.where(y==1, '+', '-')
     y_c_map = np.where(y==1, 'g', 'r')
-    # ax.axis('off')
+    ax.axis('off')
     ax.patch.set_visible(False)
     for i in range(X.shape[0]):
         plt.text(X[i, 0], X[i, 1], 
-                 str(i), 
+                 y_map[i], 
                  color=y_c_map[i], 
                  fontdict={'weight': 'bold', 'size': 12},
                  alpha=0.3)
                 # str(y[i])
                 # plt.cm.Set1(y[i] / 2.)
-    # ax.set_xticks([]), 
-    # ax.set_yticks([])
-    ax.set_ylim([0, 0.2]) #[-0.1, 1.1]
-    ax.set_xlim([0, 0.4]) #[-0.1, 1.1]
+    ax.set_xticks([]), 
+    ax.set_yticks([])
+    if tight:
+        ax.set_ylim([0, 0.4]) 
+        ax.set_xlim([0, 0.4]) 
+    else:
+        ax.set_ylim([-0.1, 1.1]) 
+        ax.set_xlim([-0.1, 1.1])
 
     if title is not None:
         ax.set_title(title, fontsize=16)
@@ -94,9 +101,9 @@ def import_single(file):
     return df_sub
 
 def reduce(df, cols):
-    df_cols_dropped = df[cols]
-    # df_cols_dropped = df_cols[df_cols['Analyte Retention Time (min)'] != 0]
-    sample_df = df_cols_dropped[df_cols_dropped['Sample Type'] == 'Unknown']
+    df_cols = df[cols]
+    df_rows_dropped = df_cols[df_cols['Analyte Retention Time (min)'] != 0]
+    sample_df = df_rows_dropped[df_rows_dropped['Sample Type'] == 'Unknown']
     return sample_df
 
 def merge(directory, cols):
@@ -130,7 +137,7 @@ def merge_reports(full_df, reports_df):
                                                  'ComponentName2']],
                                      how='left', left_on=['sample_name', 'analyte'],
                                      right_on=['SampleCode2', 'ComponentName2'])
-    # reported_full_df.drop(['SampleCode2', 'ComponentName2'], axis=1, inplace=True)
+    reported_full_df.drop(['SampleCode2', 'ComponentName2'], axis=1, inplace=True)
     reported_full_df.fillna(0, inplace=True)
     reported_full_df['reported'] = np.where(reported_full_df['Numeric Result'] == 0, 0, 1)
     return reported_full_df
@@ -144,8 +151,7 @@ def calculate_cols(df):
     return df
 
 def feature_engineer(df):
-    #drop name columns and area/height (used to determine positives)
-#     important_cols_df = df.drop(['Sample Name', 'Sample Type', 'Analyte Peak Name'], axis=1)
+    #drop area/height (used to determine positives)
     important_cols_df = df.drop(['Analyte Peak Area (counts)', 'Analyte Peak Height (cps)'],
                                  axis=1)
     #create an rt_diff and time_diff column then drop columns used to create
@@ -158,13 +164,8 @@ def feature_engineer(df):
     important_cols_df.drop(['Analyte Start Scan', 'Analyte Stop Scan'], axis=1, inplace=True)
     
     #drop columns for final model df
-#     reported_df = important_cols_df.drop(['sample_name', 'analyte', 'Numeric Result',
     reported_df = important_cols_df.drop(['Analyte Centroid Location (min)', 
                                      'Relative Retention Time'], axis=1)
-    #convert object type columns to numbers
-    
-#     reported_df.drop(['Area Ratio', 'Height Ratio', 'Analyte Slope of Baseline (%/min)'],
-#                     axis = 1, inplace=True)
     return reported_df
 
 def variance_factor(df):
@@ -174,64 +175,103 @@ def variance_factor(df):
     vif["features"] = X.columns
     return vif
 
+def compound_bar_plot(df, save=False):
+    compound_group_df = df.groupby(['analyte', 'reported']).count()
+    compound_group_df = compound_group_df['Sample Name']
+    compound_group_df = compound_group_df.reset_index(level='reported')
+    compound_group = pd.pivot(compound_group_df, columns='reported', index=None)
+    compound_group['total'] = compound_group['Sample Name'][0] + compound_group['Sample Name'][1]
+    compound_group.sort_values('total', inplace=True, ascending=False)
+    compound_group.pop('total')
+    compound_group.plot(kind='bar', stacked=True, rot=45, color=['r', 'g'], alpha=0.5,
+                        title='Chromatograms by Analyte')
+    plt.xticks(horizontalalignment='right')
+    plt.xlabel('Analyte')
+    plt.ylabel('Chromatograms')
+    plt.tight_layout()
+    plt.legend(['Not Reported', 'Reported'])
+    if save == True:
+        plt.savefig('../images/compound_bar.png')
+     
+
 
 if __name__ == '__main__':
+    # Columns to keep (include columns about samples and analytes)
     columns = ['Sample Name', 'Sample Type', 'Analyte Peak Name', 'Analyte Peak Area (counts)',
-            'Analyte Peak Height (cps)',
+            'Analyte Peak Height (cps)', 'Response Factor',
             'Analyte Retention Time (min)', 'Analyte Expected RT (min)',
             'Analyte Centroid Location (min)', 'Analyte Start Scan', 'Analyte Start Time (min)',
             'Analyte Stop Scan', 'Analyte Stop Time (min)', 'Analyte Peak Width (min)',
             'Area Ratio', 'Height Ratio', 'Analyte Peak Width at 50% Height (min)',
             'Analyte Slope of Baseline (%/min)', 'Analyte Peak Asymmetry',
             'Analyte Integration Quality', 'Relative Retention Time']
-
+    
+    # Merge all files in data folder
     full_df = merge(r'../data', columns)
-    print(full_df.head().to_markdown())
 
+    # Update analyte names from instrument data to match analyte names from reports
     remove_list = ['-B1a', '-B1b', ' NH4 Adduct', 'cis-', 'trans-']
     spinosad_list = ['Spinosyn A', 'Spinosyn D']
     clean_df = clean_names(full_df, remove_list, spinosad_list)
 
+    # Create dataframe from positive reports xlsx
     pos_df = pd.read_excel('../data/pest_pos.xlsx')
     pos_df['SampleCode2'] = pos_df['SampleCode'].str[:-1]
     pos_df = correct_sp(pos_df, 'Imadacloprid_Result', 'Imidacloprid_Result')
     pos_df = correct_sp(pos_df, 'Spirotretramat_Result', 'Spirotetramat_Result')
     pos_df['ComponentName2'] = pos_df['ComponentName'].str.replace('_Result', '')
 
+    # Merge instrument data and positive reports
     reported_full_df = merge_reports(full_df, pos_df)
     
+    '''
+    #Filter on analyte name
+    reported_full_df = reported_full_df[reported_full_df['analyte'] == 'Myclobutanil']
+    '''
+
+    # Plot pos/neg by compound
+    compound_bar_plot(reported_full_df, save=True)
+    plt.show() 
+    
+    # Calculate new columns and create numeric columns from object columns
     add_cols_df = calculate_cols(reported_full_df)
 
+    # Drop all non-numeric columns
     numeric_df = add_cols_df._get_numeric_data()
 
+    # Test best way to handle NaNs (drop or fill with 0s) 
+    # NaNs are from #DIV/0 errors in Analyte Slope of Baseline (%/min)
     drop_na_df = numeric_df.dropna()
-
     zero_na_df = numeric_df.fillna(0)
+
+    '''
+    Plotting EDA
 
     pd.plotting.scatter_matrix(add_cols_df, figsize=(12,12))
 
-    # add_cols_df.plot.scatter(x='Relative Retention Time', y='Analyte Centroid Location (min)')
-    # plt.savefig('../images/eda_scatter_1')
+    add_cols_df.plot.scatter(x='Relative Retention Time', y='Analyte Centroid Location (min)')
+    plt.savefig('../images/eda_scatter_1')
 
-    # add_cols_df.plot.scatter(x='time_diff', y='Analyte Peak Width (min)')
-
+    add_cols_df.plot.scatter(x='time_diff', y='Analyte Peak Width (min)')
+    
     numeric_df['baseline'].hist(bins = 100)
 
-    # print(variance_factor(zero_na_df).to_markdown())
-    
+    print(variance_factor(zero_na_df).to_markdown())
+    '''
+
     df_1 = feature_engineer(zero_na_df)
 
-    # print(variance_factor(df_1).to_markdown())
+    print(variance_factor(zero_na_df))
 
-    df_2 = df_1.drop(['Analyte Peak Width (min)', 'Numeric Result', 'area_ratio',
-                      'time_diff', 'Analyte Peak Width at 50% Height (min)'], axis=1)
+    # df_2 = df_1.drop(['Analyte Peak Width (min)', 'Numeric Result', 'area_ratio',
+                    #   'time_diff', 'Analyte Peak Width at 50% Height (min)'], axis=1)
 
     # print(variance_factor(df_2).to_markdown())
 
     # df_2.plot.scatter(x='Analyte Peak Asymmetry', y='Analyte Integration Quality')
 
     # plt.show()
-
+    
     y = df_1.pop('reported')
     X = df_1.values
     scaler = StandardScaler()
@@ -241,19 +281,13 @@ if __name__ == '__main__':
 
     fig, ax = plt.subplots(figsize=(8,8))
     scree_plot(ax, pca, 5, 'First Scree Plot')
-    #I think the elbow is at the 4th or 5th component
 
     pca_2 = PCA(n_components=2)
     X_pca_2 = pca_2.fit_transform(X_scale)
     fig, ax = plt.subplots(figsize=(8,8))
-    plot_mnist_embedding(ax, X_pca_2, y)
+    plot_mnist_embedding(ax, X_pca_2, y, tight=True)
+    # plt.savefig('../images/....png')
     plt.show()
-    '''
-    # print(reported_full_df.iloc[8142])
-    # print(reported_full_df.iloc[8143])
-    # print(reported_full_df.iloc[18614])
-    # print(reported_full_df.iloc[16292])
-    # print(reported_full_df.iloc[16212])
-    print(sorted(pos_df['ComponentName'].unique()))
-    print(sorted(reported_full_df['analyte'].unique()))
-    '''
+    
+    # print(zero_na_df['Response Factor'])
+    # Response factor seems to be 0 for all sampls
