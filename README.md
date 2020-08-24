@@ -37,4 +37,11 @@ After inspecting the initial data it became clear that most of the non-reported 
 
 Table 2: Two rows of data, the top is an example of a chromatogram with no integrated peak and the bottom is an example of a chromatogram with an integrated peak.
 
+After the datapoints without an integrated chromatogram were removed there were 1,843 points remaining, with 236 of these having been reported.
+
 ## EDA
+The exploratory data anlysis started with assessing the features using an understanding of chemistry. There are a number of features that describe the width of the peak. The features describing the start and stop of the peak were dropped, and the peak width feature was kept. Also a retention time difference feature was calculated by subtracting the expected retention time from the observed retention time. 
+
+After dropping features that were used to calculate other features there were still a number of featues that could be directly related to one another. Here is are scatter plots for four of these pairs of features.
+
+![img](../images/eda_four_scatter.png)
