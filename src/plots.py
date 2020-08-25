@@ -1,6 +1,34 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from data_class import Data
+
+def pca_plots(df):
+    y = df.pop('reported')
+    X = df.values
+    scaler = StandardScaler()
+    X_scale = scaler.fit_transform(X)
+    pca = PCA(n_components=4)
+    X_pca = pca.fit_transform(X_scale)
+
+    fig, ax = plt.subplots(figsize=(8, 8))
+    scree_plot(ax, pca, 5, 'Scree Plot')
+
+    pca_2 = PCA(n_components=2)
+    X_pca_2 = pca_2.fit_transform(X_scale)
+    fig, ax = plt.subplots(figsize=(8, 8))
+    plot_mnist_embedding(ax, X_pca_2, y, tight=False)
+    # plt.savefig('../images/pca_all_onehot_broad.png')
+    plt.show()
+
+    pca_3 = PCA(n_components=3)
+    pca_3.fit(X_scale)
+
+    fig = plt.figure(figsize=(8, 8))
+    pca_3d(fig, df, X_scale, y, pca_3)
 
 
 def scree_plot(ax, pca, n_components_to_plot=8, title=None):
@@ -89,6 +117,27 @@ def plot_mnist_embedding(ax, X, y, tight=False, title=None):
         ax.set_title(title, fontsize=16)
 
 
+def pca_3d(fig, df, X_scale, y, pca_3):
+    result = pd.DataFrame(pca_3.transform(X_scale), columns=['PCA%i' % i for i in range(3)], index=df.index)
+    y_map = np.where(y==1, '+', '_')
+    y_c_map = np.where(y==1, 'g', 'r')
+
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(result['PCA0'], result['PCA1'], result['PCA2'], c=y_c_map, marker='x', alpha=0.3)
+
+    xAxisLine = ((min(result['PCA0']), max(result['PCA0'])), (0, 0), (0, 0))
+    ax.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'r')
+    yAxisLine = ((0, 0), (min(result['PCA1']), max(result['PCA1'])), (0, 0))
+    ax.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'r')
+    zAxisLine = ((0, 0), (0, 0), (min(result['PCA2']), max(result['PCA2'])))
+    ax.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'r')
+
+    ax.set_xlabel('PCA0')
+    ax.set_ylabel('PCA1')
+    ax.set_zlabel('PCA2')
+    plt.show()
+
+
 def compound_bar_plot(df, save=False):
     compound_group_df = df.groupby(['analyte', 'reported']).count()
     compound_group_df = compound_group_df['Sample Name']
@@ -117,7 +166,7 @@ def scatter_plots(df, list_pairs, save=False):
         ax = fig.add_subplot(2, 2, num + 1)
         x = df[pair[0]]
         y = df[pair[1]]
-        ax.scatter(x, y)
+        ax.scatter(x, y, alpha=0.3)
         ax.set_xlabel(pair[0])
         ax.set_ylabel(pair[1])
         plt.tight_layout()
@@ -127,4 +176,31 @@ def scatter_plots(df, list_pairs, save=False):
         plt.show()
 
 if __name__ == '__main__':
-    pass
+
+    cols_drop_list = ['Analyte Start Scan', 'Analyte Stop Scan',
+                        'Analyte Centroid Location (min)',
+                        'Relative Retention Time',
+                        'Analyte Integration Quality',
+                        # 'Analyte Peak Area (counts)',
+                        'Analyte Peak Height (cps)',
+                        'Analyte Peak Width (min)',
+                        'Analyte Peak Width at 50% Height (min)',
+                        'height_ratio',
+                        'area_ratio',
+                        'Analyte Start Time (min)',
+                        'Analyte Stop Time (min)']
+
+    all_df = Data('../data/merged_df.csv', 'All', cols_drop_list)
+    
+    pairs = [('Relative Retention Time', 'Analyte Centroid Location (min)'),
+             ('Analyte Peak Area (counts)', 'Analyte Peak Height (cps)'),
+             ('area_ratio', 'height_ratio'), 
+             ('Analyte Peak Width (min)',
+              'Analyte Peak Width at 50% Height (min)')]
+    scatter_plots(all_df.full_df, pairs, save=False)
+
+    pca_plots(all_df.full_df)
+
+    var_corr = all_df.limited_no_analyte_df.corr()
+    sns.heatmap(var_corr)
+    plt.show()

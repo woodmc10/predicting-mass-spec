@@ -6,16 +6,21 @@ Analytical chemistry consists of extracting analytes of interest from samples an
 Figure 1: Process of pesticide analysi from application to instrumental analysis
 ![pesticide_analysis](images/chem_workflow.png)
 
-Pesticide testing is one of many applications for analytical chemsitry and there are many different items that may need to be tested for pesticides. These include organic produce, hay fed to livestock, turf from children's sports fields, and many other applications. When a samples is sent into the lab the pesticides must be extracted away from any other material in the sample. The extraction process helps to reduce interferences and improve signal when the sample is injected on the instrument. After the extraction process the samples are loaded onto instruments that can separate and identify the pesticides. The data in this project was analyzed using liquid chromatography mass spectrometry. Each sample is applied to a solid phase column and liquid mobile phases are used to separate the pesticides. Every pesticide will have some attraction to the solid phase and some attraction to the liquid mobile phases. This difference of attraction will cause the pesticides to stay on the column for different lengths of time. While the pesticides are moving through the column there is some amount of spread that happens, so when the pesticide is eluted from the column and detected by the mass spec it appears as a gaussian peak. The software integrates this peak and stores the information that describes the peak in a table. The width, height, retention time and a number of other features are stored for each peak. 
+Pesticide testing is one of many applications for analytical chemsitry and there are many different items that may need to be tested for pesticides. These include organic produce, hay fed to livestock, turf from children's sports fields, and many other applications. When a samples is sent into the lab the pesticides must be extracted away from any other material in the sample. The extraction process helps to reduce interferences and improve signal when the sample is injected on the instrument. After the extraction process the samples are loaded onto instruments that can separate and identify the pesticides. 
 
-Figure 2: Four chromatograms, the top two are examples of positives results and the bottom two are examples of integrated noise.
+![chrom_gif](https://upload.wikimedia.org/wikipedia/commons/c/c5/Analytical_Gas_Chromatography_A.gif)
+GIF 1: Animation of chromatography
+
+The data in this project was analyzed using liquid chromatography mass spectrometry. Each sample is applied to a solid phase column and liquid mobile phases are used to separate the pesticides. Every pesticide will have some attraction to the solid phase and some attraction to the liquid mobile phases. This difference of attraction will cause the pesticides to stay on the column for different lengths of time. While the pesticides are moving through the column there is some amount of spread that happens, so when the pesticide is eluted from the column and detected by the mass spec it appears as a gaussian peak. The software integrates this peak and stores the information that describes the peak in a table. The width, height, retention time and a number of other features are stored for each peak. 
+
 ![chromatograms](images/chrom_1.png)
+Figure 2: Four chromatograms, the top two are examples of positives results and the bottom two are examples of integrated noise.
 
 # Data
 
 ## Original Data
 
-An analytical laboratory in the area provided me with the results from their pesticide analysis for the last two years. The laboratory analyzed the samples in batches, which included the samples, quality controls, and blanks. Each injection was analyzed for 17 pesticides, this resulted in over 56,000 data points for analysis. The following table show the different columns included with each point. The columns are separated into sections based on what part of the analysis is being described. The instrument and method sections are the same for every point. The internal standard section describe the peak of the internal standard, a compound added to each sample to evaluate extraction and instrument peformance. Only the columns describing the pesticide, aka analyte, or sample were kept as features for the initial exploratory data analysis.
+An analytical laboratory in the area provided me with the results from their pesticide analysis for the last two years. The laboratory analyzed the samples in batches, which included the samples, quality controls, and blanks. Each injection was analyzed for 17 pesticides, this resulted in over 56,000 data points for analysis. The following table show the different features included with each point. The features are separated into columns based on what part of the analysis is being described. The instrument and method sections are the same for every point. The internal standard section describe the peak of the internal standard, a compound added to each sample to evaluate extraction and instrument peformance. Only the columns describing the pesticide, aka analyte, or sample were kept as features for the initial exploratory data analysis.
 
 Analyte/Sample | Instrument | Internal Standard | Method
 ---------------|------------|-------------------|--------
@@ -25,10 +30,10 @@ Analyte/Sample | Instrument | Internal Standard | Method
 
 ## Data Cleaning
 ### Labeling Samples
-The data from the instrument was combine with the list of positives to provide a label for each data point. The analyte name and sample number for each data point was compared to a list of reported positives from the lab. Points that were reported positive were labeled with a 1 and samples that were not reported were labeled with a 0. 
+The data from the instrument was combine with the list of reported results to provide a label for each data point. The analyte name and sample number for each data point was compared to a list of reported results from the lab. Points that were reported were labeled with a 1 and samples that were not reported were labeled with a 0. 
 
 ### Screening Negatives
-After inspecting the initial data it became clear that most of the non-reported samples did not have integrated peaks in the chromatogram window. This happens when the software does not find any peak above the noise threshold set in the method. The resulting row of data will contain zeros for every column that describes the integrated peak. Since this was typical of 98% of the non-reported results a model would be able to predict a negative result based on these zeros and still have very high accuracy. To avoid this problem, all the rows where a peak was not integrated were dropped. 
+After inspecting the initial data it became clear that most of the non-reported samples did not have integrated peaks in the chromatogram window. This happens when the software does not find any peak above the noise threshold set in the method. The resulting row of data will contain zeros for every feature that describes the integrated peak. Since this was typical of 98% of the non-reported results a model would be able to predict a negative result based on these zeros and still have very high accuracy. To avoid this problem, all the rows where a peak was not integrated were dropped. 
 
 |     | Sample Name   | Sample Type   | Analyte Peak Name   |   Analyte Peak Area (counts) |   Analyte Peak Height (cps) |   Analyte Retention Time (min) |   Analyte Expected RT (min) |   Analyte Centroid Location (min) |   Analyte Start Scan |   Analyte Start Time (min) |   Analyte Stop Scan |   Analyte Stop Time (min) |   Analyte Peak Width (min) |   Area Ratio |   Height Ratio |   Analyte Peak Width at 50% Height (min) |   Analyte Slope of Baseline (%/min) |   Analyte Peak Asymmetry |   Analyte Integration Quality |   Relative Retention Time |
 |----:|:--------------|:--------------|:--------------------|-----------------------------:|----------------------------:|-------------------------------:|----------------------------:|----------------------------------:|---------------------:|---------------------------:|--------------------:|--------------------------:|---------------------------:|-------------:|---------------:|-----------------------------------------:|------------------------------------:|-------------------------:|------------------------------:|--------------------------:|
@@ -37,11 +42,28 @@ After inspecting the initial data it became clear that most of the non-reported 
 
 Table 2: Two rows of data, the top is an example of a chromatogram with no integrated peak and the bottom is an example of a chromatogram with an integrated peak.
 
-After the datapoints without an integrated chromatogram were removed there were 1,843 points remaining, with 236 of these having been reported.
+After the datapoints without an integrated chromatogram were removed there were 1,824 points remaining, with 239 of these having been reported.
 
 ## EDA
-The exploratory data anlysis started with assessing the features using an understanding of chemistry. There are a number of features that describe the width of the peak. The features describing the start and stop of the peak were dropped, and the peak width feature was kept. Also a retention time difference feature was calculated by subtracting the expected retention time from the observed retention time. 
+There are a number of features that describe the width of the peak. The features describing the start and stop of the peak were dropped, and the peak width feature was kept. Also a retention time difference feature was calculated by subtracting the expected retention time from the observed retention time. 
 
-After dropping features that were used to calculate other features there were still a number of featues that could be directly related to one another. Here is are scatter plots for four of these pairs of features.
+After dropping features that were used to calculate other features there were still a number of featues that could be colinear. Here are scatter plots for four of these pairs of features.
 
-![img](../images/eda_four_scatter.png)
+![img](images/eda_four_scatter.png)
+Figure 3: Scatter plots of pairs of features that were expected to be colinear
+
+Figure 3 shows that three of the four pairs are highly colinear and one of the pairs is correlated. One of each of these pairs of features was dropped. The variance inflation factors were calculated for each remaining feature and are included in Table 3 below.
+
+| VIF Factor | Features                               |
+|-----------:|:---------------------------------------|
+|     21.3   | Area Ratio                             |
+|     21.3   | Analyte Peak Height (cps)              |
+|     11.9   | Analyte Peak Width at 50% Height (min) |
+|     10.4   | Analyte Integration Quality            |
+|      6.72  | Relative Retention Time                |
+|      6.21  | Analyte Peak Asymmetry                 |
+|      2.14  | Retention Time Difference              |
+|      1.10  | Baseline                               |
+
+Table 3: Variance Inflation Factor for features
+
