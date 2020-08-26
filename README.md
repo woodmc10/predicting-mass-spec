@@ -3,8 +3,8 @@ Analytical chemistry consists of extracting analytes of interest from samples an
 
 # Introduction to Analytical Chemistry
 ## Workflow
-Figure 1: Process of pesticide analysi from application to instrumental analysis
 ![pesticide_analysis](images/chem_workflow.png)
+Figure 1: Process of pesticide analysi from application to instrumental analysis
 
 Pesticide testing is one of many applications for analytical chemsitry and there are many different items that may need to be tested for pesticides. These include organic produce, hay fed to livestock, turf from children's sports fields, and many other applications. When a samples is sent into the lab the pesticides must be extracted away from any other material in the sample. The extraction process helps to reduce interferences and improve signal when the sample is injected on the instrument. After the extraction process the samples are loaded onto instruments that can separate and identify the pesticides. 
 
@@ -45,25 +45,48 @@ Table 2: Two rows of data, the top is an example of a chromatogram with no integ
 After the datapoints without an integrated chromatogram were removed there were 1,824 points remaining, with 239 of these having been reported.
 
 ## EDA
+### Principal Component Analysis
+The initial portion of the exploratory data anlysis was to evaluate if the data contained enough signal to distinguish the reported samples from the non-reported samples. So, I one hot encoded the analyte names and ran a PCA on the data. When plotted, this showed that there were distinct areas where reported results were located. The reported locations appear to correspond to the upper tips of a few different sections and almost all points in the top right corner. 
+
+![pca-2D](images/pca_all_onehot_broad.png)
+
+Figure 3: Biplot of the first two principal components
+
+### Feature Engineering
 There are a number of features that describe the width of the peak. The features describing the start and stop of the peak were dropped, and the peak width feature was kept. Also a retention time difference feature was calculated by subtracting the expected retention time from the observed retention time. 
 
-After dropping features that were used to calculate other features there were still a number of featues that could be colinear. Here are scatter plots for four of these pairs of features.
+After dropping features that were used to calculate other features there were still a number of featues that could be colinear. Figure 4 shows four of these pairs of featues. Three of the four pairs are highly colinear and one of the pairs is correlated. One of each of these pairs of features needed to be dropped. 
 
-![img](images/eda_four_scatter.png)
-Figure 3: Scatter plots of pairs of features that were expected to be colinear
+![four_scatter](images/eda_four_scatter.png)
+Figure 4: Scatter plots of pairs of features that were expected to be colinear
 
-Figure 3 shows that three of the four pairs are highly colinear and one of the pairs is correlated. One of each of these pairs of features was dropped. The variance inflation factors were calculated for each remaining feature and are included in Table 3 below.
+### Feature Selection
+Instead of arbitrarily picking one of the features, a lasso regression was run with varying learning rates and the weights of the coefficients were plotted. Using this plot I selected the feature in each colinear pair that had a lower weight on the model, or was set to a weight zero at a lower learning rate. 
+
+![lasso](images/lasso.png)
+Figure 5: Lasso Regularization
+
+Based on the lasso regularization plot Analyte Centroid Location, Analyte Peak Height, height_ratio, and Analyte Peak Width were removed. The variance inflation factors were calculated for each remaining feature which showed ther were still colinear featues in the data. These features were again compared to the lasso plot to pick the least important colinear features to drop. This process was iterated until the remaining features showed low colinearity. The final features and are included in Table 3 below.
 
 | VIF Factor | Features                               |
 |-----------:|:---------------------------------------|
-|     21.3   | Area Ratio                             |
-|     21.3   | Analyte Peak Height (cps)              |
-|     11.9   | Analyte Peak Width at 50% Height (min) |
-|     10.4   | Analyte Integration Quality            |
-|      6.72  | Relative Retention Time                |
-|      6.21  | Analyte Peak Asymmetry                 |
-|      2.14  | Retention Time Difference              |
-|      1.10  | Baseline                               |
+|     11.4   | Analyte Peak Width (min)               |
+|     6.24   | Analyte Peak Asymmetry                 |
+|     2.00   | Retention Time Difference              |
+|     1.29   | Analyte Peak Area (counts)             |
+|     1.07   | Baseline                               |
 
 Table 3: Variance Inflation Factor for features
 
+# Models
+## Model Selection
+In order to understand the importance of the features for each of the models, Logistic Regression and Random Forest were chosen. A randomized search was performed to determine the best hyperparameters for fitting each model. The hyperparameters were very similar whether the five non-colinear features or all the features were used for training the data. A ROC plot and plot of F1 score vs threshold were used to compare the performance of the logistic regression to the random forest.
+
+![roc_f1](images/roc_f1.png)
+Figure 6: ROC curve and F1 score comparison over various thresholds for logistic regression and random forest classifier
+
+The best F1 score for the logistic regression and random forest 0.61 and 0.76 respectively. The coefficients and the feature importances of the models were compared to see if the models were assigning similar weight to the features. The area of the peak was the most important feature for both models, but the logistic regression put much more weight on the different analytes than the random forest did. The random forest put almost no weight on any of the analyte features. This could be due to the nature of random forest feature importance calculation having an impact from the number of times a feature is used for a split. Since all of the anlayte features are one hot encoded categorical features the random forest can split on these features a maximum of one time making them less important than the other continues features. 
+
+![importance](images/bar_features.png)
+
+The models were fit again with the full set of data and the F1 scores improved to 0.63 and 0.81. 

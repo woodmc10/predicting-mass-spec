@@ -4,29 +4,46 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import Lasso
+from sklearn.metrics import recall_score, f1_score
 from data_class import Data
+from model_class import Model
 
 def pca_plots(df):
+    '''Generate scree plot, 2D pca plot, and 3D pca plot for the data
+    Paramters
+    ---------
+    df: DataFrame
+        dataframe containing the reported target
+    
+    Return
+    ------
+    None
+    '''
+    # Prep data
     y = df.pop('reported')
     X = df.values
     scaler = StandardScaler()
     X_scale = scaler.fit_transform(X)
+
+    # Scree Plot
     pca = PCA(n_components=4)
     X_pca = pca.fit_transform(X_scale)
-
     fig, ax = plt.subplots(figsize=(8, 8))
     scree_plot(ax, pca, 5, 'Scree Plot')
 
+    # 2D PCA plot
     pca_2 = PCA(n_components=2)
     X_pca_2 = pca_2.fit_transform(X_scale)
     fig, ax = plt.subplots(figsize=(8, 8))
-    plot_mnist_embedding(ax, X_pca_2, y, tight=False)
-    # plt.savefig('../images/pca_all_onehot_broad.png')
+    plot_mnist_embedding(ax, X_pca_2, y)
+    plt.savefig('../images/pca_all_onehot_broad.png')
     plt.show()
 
+    # 3D PCA plot
     pca_3 = PCA(n_components=3)
     pca_3.fit(X_scale)
-
     fig = plt.figure(figsize=(8, 8))
     pca_3d(fig, df, X_scale, y, pca_3)
 
@@ -66,14 +83,13 @@ def scree_plot(ax, pca, n_components_to_plot=8, title=None):
     ax.set_xticklabels(ind, fontsize=12)
     ax.set_ylim(0, max(vals) + 0.05)
     ax.set_xlim(0 - 0.45, n_components_to_plot + 0.45)
-    ax.set_xlabel("Principal Component", fontsize=12)
-    ax.set_ylabel("Variance Explained (%)", fontsize=12)
-    if title is not None:
-        ax.set_title(title, fontsize=16)
+    ax.set_xlabel("Principal Component", fontsize=14)
+    ax.set_ylabel("Variance Explained (%)", fontsize=14)
+    ax.set_title('Principal Component Analysis', fontsize=16)
 
 
 def plot_mnist_embedding(ax, X, y, tight=False, title=None):
-    """Plot an embedding of the mnist dataset onto a plane.
+    """Plot 2D pca.
     
     Parameters
     ----------
@@ -96,7 +112,6 @@ def plot_mnist_embedding(ax, X, y, tight=False, title=None):
     X = (X - x_min) / (x_max - x_min)
     y_map = np.where(y==1, '+', '-')
     y_c_map = np.where(y==1, 'g', 'r')
-    ax.axis('off')
     ax.patch.set_visible(False)
     for i in range(X.shape[0]):
         plt.text(X[i, 0], X[i, 1], 
@@ -104,8 +119,11 @@ def plot_mnist_embedding(ax, X, y, tight=False, title=None):
                  color=y_c_map[i], 
                  fontdict={'weight': 'bold', 'size': 12},
                  alpha=0.3)
-    ax.set_xticks([]), 
-    ax.set_yticks([])
+    # ax.set_xticks([]), 
+    # ax.set_yticks([])
+    ax.set_xlabel('Principal Component 1')
+    ax.set_ylabel('Principal Component 2')
+    ax.set_title('Principal Component Analysis', fontsize=16)
     if tight:
         ax.set_ylim([0, 0.4]) 
         ax.set_xlim([0, 0.4]) 
@@ -113,11 +131,22 @@ def plot_mnist_embedding(ax, X, y, tight=False, title=None):
         ax.set_ylim([-0.1, 1.1]) 
         ax.set_xlim([-0.1, 1.1])
 
-    if title is not None:
-        ax.set_title(title, fontsize=16)
-
 
 def pca_3d(fig, df, X_scale, y, pca_3):
+    '''Plot 3D pca plot
+    Parameters
+    ----------
+    fig: matplotlib.figure object
+        figure to plot on
+    df: DataFrame
+        dataframe of data containing column names
+    X_scale: numpy array
+        scaled data from df
+    y: numpy array
+        targets
+    pca_3: sklearn.decomposition.PCA object.
+      A fit PCA object.
+    '''
     result = pd.DataFrame(pca_3.transform(X_scale), columns=['PCA%i' % i for i in range(3)], index=df.index)
     y_map = np.where(y==1, '+', '_')
     y_c_map = np.where(y==1, 'g', 'r')
@@ -135,10 +164,22 @@ def pca_3d(fig, df, X_scale, y, pca_3):
     ax.set_xlabel('PCA0')
     ax.set_ylabel('PCA1')
     ax.set_zlabel('PCA2')
+    ax.set_title('Principal Component Analysis', fontsize=16)
     plt.show()
 
 
 def compound_bar_plot(df, save=False):
+    ''''Plot a stacked bar plot with each bar representing the number of
+    data points for each analyte separated into reported and unreported
+
+    Parameters
+    ----------
+    df: DataFrame
+        dataframe containing analyte column and reported column
+        dataframe cannot be onehot encoded
+    save: bool
+        if true, save to images folder
+    '''
     compound_group_df = df.groupby(['analyte', 'reported']).count()
     compound_group_df = compound_group_df['Sample Name']
     compound_group_df = compound_group_df.reset_index(level='reported')
@@ -160,6 +201,16 @@ def compound_bar_plot(df, save=False):
 
 
 def scatter_plots(df, list_pairs, save=False):
+    '''Generate four scatter plots from pairs of columns
+    Parameters
+    ----------
+    df: DataFrame
+        dataframe containing columns in list_pairs
+    list_pairs:
+        list of four pairs of columns to compare with scatter plots
+    save: bool
+        if true then save, if false then show plot
+    '''
     fig = plt.figure(figsize=(10, 8))
     # fig.suptitle('Scatter Plots')
     for num, pair in enumerate(list_pairs):
@@ -175,15 +226,71 @@ def scatter_plots(df, list_pairs, save=False):
     else:
         plt.show()
 
+def lasso_plot(data, save=False):
+    '''Plot the lasso regularization of all the features at different
+    learning rates.
+    Parameters
+    ----------
+    data: Data class object
+        
+    save: bool
+        If true, save figure. If false, show figure
+    
+    Return
+    ------
+    None
+    '''
+    X, y = Data.pop_reported(data.limited_df)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33,
+                                                        random_state=42)
+    # Get weights from lasso model for 50 different alphas
+    n_alphas = 50
+    alphas = np.logspace(-6, -1, n_alphas)
+    coefs = []
+    for a in alphas:
+        lasso = Lasso(alpha=a, fit_intercept=False, max_iter=100000)
+        mod = Model(lasso, f1_score)
+        mod.fit(X_train, y_train)
+        coefs.append(mod.log_coef_())
+    coefs = np.array(coefs)
+
+    # Zip the column names and weights together for plot labels
+    labels = data.limited_df.drop('reported', axis=1).columns
+    zipped = zip(labels, coefs.T)
+    zipped = list(zipped)
+    sorted_zip = sorted(zipped, key=lambda x: np.abs(x[1][0]))
+    counter = 0
+
+    # Plot all weights, keep less important weights in background/gray
+    fig, ax = plt.subplots(figsize=(12, 8))
+    cmap = plt.cm.get_cmap('tab20')
+    for label, coef in sorted_zip:
+        if np.max(coef) > 0.1 or np.min(coef) < -0.1:
+            color = counter * 2 
+            counter += 1
+        else:
+            color = 1
+            label = None
+        ax.plot(alphas, np.array(coef), label=label, c=cmap(color))
+    ax.set_xscale('log')
+    ax.set_xlabel('Learning Rate', fontsize=14)
+    ax.set_ylabel('Weights', fontsize=14)
+    ax.set_title('Lasso Feature Engineering', fontsize=16)
+    ax.legend(loc=1)
+    if save:
+        plt.savefig('../images/lasso.png')
+    else:
+        plt.show()
+
 if __name__ == '__main__':
 
     cols_drop_list = ['Analyte Start Scan', 'Analyte Stop Scan',
                         'Analyte Centroid Location (min)',
                         'Relative Retention Time',
                         'Analyte Integration Quality',
-                        # 'Analyte Peak Area (counts)',
+                        # # 'Analyte Peak Area (counts)',
                         'Analyte Peak Height (cps)',
-                        'Analyte Peak Width (min)',
+                        # 'Analyte Peak Width (min)',
                         'Analyte Peak Width at 50% Height (min)',
                         'height_ratio',
                         'area_ratio',
@@ -197,9 +304,11 @@ if __name__ == '__main__':
              ('area_ratio', 'height_ratio'), 
              ('Analyte Peak Width (min)',
               'Analyte Peak Width at 50% Height (min)')]
-    scatter_plots(all_df.full_df, pairs, save=False)
+    # scatter_plots(all_df.full_df, pairs, save=False)
 
-    pca_plots(all_df.full_df)
+    # pca_plots(all_df.full_df)
+
+    lasso_plot(all_df)
 
     var_corr = all_df.limited_no_analyte_df.corr()
     sns.heatmap(var_corr)
