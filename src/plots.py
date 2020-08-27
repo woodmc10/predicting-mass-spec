@@ -139,7 +139,6 @@ def pca_3d(fig, df, X_scale, y, pca_3):
     result = pd.DataFrame(pca_3.transform(X_scale),
                           columns=['PCA%i' % i for i in range(3)],
                           index=df.index)
-    y_map = np.where(y == 1, '+', '_')
     y_c_map = np.where(y == 1, 'g', 'r')
 
     ax = fig.add_subplot(111, projection='3d')

@@ -82,7 +82,8 @@ def compare_models(model_list, metric, X, y, thresh=0.5, plot=True):
     axes[1].set_xlabel('Threshold')
     axes[1].set_ylabel('F1 Score')
     axes[1].set_title('Threshold Comparison')
-    # plt.savefig('../images/roc_f1.png')
+    plt.savefig('../images/roc_f1.png')
+    plt.show()
     return metric_result, model_list
 
 
@@ -214,10 +215,10 @@ if __name__ == '__main__':
     lr = LogisticRegression(penalty='none', class_weight='balanced',
                             solver='saga', max_iter=100000)
     rf = RandomForestClassifier(class_weight='balanced_subsample')
-    mod_list = [(lr, 'Log L1 Balanced'), (rf, 'Rand Forest')]
+    mod_list = [(lr, 'Logistic Regression'), (rf, 'Random Forest')]
     scores, model_list = compare_models(mod_list, f1_score, X, y)
     print(scores)
-    
+
     # plot feature importance and coefs
     log_complex = model_list[0][0]
     random_forest = model_list[1][0]

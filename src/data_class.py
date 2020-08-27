@@ -109,7 +109,7 @@ def create_data(file, analytes):
 
 
 if __name__ == '__main__':
-
+    # check class creation
     all_df = create_data('../data/merged_df.csv', 'All')
     myclo_df = create_data('../data/merged_df_myclo.csv', 'Myclobutanil')
     print(myclo_df.analytes)

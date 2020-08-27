@@ -8,7 +8,7 @@ from sklearn.metrics import (recall_score, f1_score, roc_curve,
                              make_scorer, classification_report)
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.ensemble import RandomForestClassifier
-from data_class import Data
+from data_class import Data, create_data
 import statsmodels.api as sm
 from scipy.stats import uniform, randint
 
@@ -184,7 +184,6 @@ class Model(object):
 
 if __name__ == '__main__':
     all_df = create_data('../data/merged_df.csv', 'All')
-    print(variance_factor(all_df.limited_df).to_markdown())
 
     # logistic regression and random forest models - find best params
     X, y = Data.pop_reported(all_df.limited_df)

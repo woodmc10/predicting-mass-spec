@@ -59,6 +59,7 @@ There are a number of features that describe the width of the peak. The features
 
 After dropping features that were used to calculate other features there were still a number that could be collinear. Figure 4 shows four of these pairs of features. Three of the four pairs are highly collinear and one of the pairs is correlated. One of each of these pairs of features needed to be dropped. 
 
+### <Scatter Plot Comparisons>
 ![four_scatter](images/eda_four_scatter.png)
 Figure 4: Scatter plots of pairs of features that were expected to be collinear
 
