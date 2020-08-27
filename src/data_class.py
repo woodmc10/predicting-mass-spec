@@ -2,7 +2,19 @@ import pandas as pd
 
 
 class Data(object):
-    
+    '''Class to contain the different dataframes that will be created
+    after calling the data pipeline. Four total dataframes, analytes one
+    hot encoded or dropped and columns filtered for colinearity or not.
+    Parameters
+    ----------
+    file: string
+        file name containing data from pipeline
+    analytes: string
+        list of analytes included in data
+        'All' for all analytes or analyte name for single analyte
+    columns: list
+        columns to be removed for colinearity
+    '''
     def __init__(self, file, analytes, columns=None):
         self.file = file
         self.analytes = analytes
@@ -14,6 +26,19 @@ class Data(object):
 
     @staticmethod
     def pop_reported(df):
+        '''Pop reported column from df, return values
+        Parameters
+        ----------
+        df: DataFrame
+            dataframe containing features and target(reported)
+
+        Return
+        ------
+        X: numpy array
+            numpy array of all feature columns
+        y: numpy array
+            numpy array of targets
+        '''
         df_copy = df.copy()
         y = df_copy.pop('reported').values
         X = df_copy.values
@@ -21,12 +46,36 @@ class Data(object):
 
     @staticmethod
     def drop_cols(df, drop_cols):
+        '''Drop columns from dataframe
+        Parameters
+        ----------
+        df: DataFrame
+            original df
+        drop_cols: list
+            list of columns to drop
+
+        Return
+        ------
+        df: DataFrame
+            final dataframe with columns removed
+        '''
         if drop_cols is not None:
             df = df.drop(drop_cols, axis=1)
         return df
 
     @staticmethod
     def drop_analyte_cols(df):
+        '''Drop all one hot encoded analyte columns
+        Parameters
+        ----------
+        df: DataFrame
+            dataframe containing one hot encoded analyte columns
+
+        Return
+        ------
+        df_short: DataFrame
+            dataframe with analyte columns dropped
+        '''
         df_short = df.loc[:, ~df.columns.str.startswith('analyte_')]
         return df_short
 
@@ -34,17 +83,15 @@ class Data(object):
 if __name__ == '__main__':
 
     cols_drop_list = ['Analyte Start Scan', 'Analyte Stop Scan',
-                        'Analyte Centroid Location (min)',
-                        'Relative Retention Time',
-                        'Analyte Integration Quality',
-                        # 'Analyte Peak Area (counts)',
-                        'Analyte Peak Height (cps)',
-                        'Analyte Peak Width (min)',
-                        'Analyte Peak Width at 50% Height (min)',
-                        'height_ratio',
-                        'area_ratio',
-                        'Analyte Start Time (min)',
-                        'Analyte Stop Time (min)']
+                      'Analyte Centroid Location (min)',
+                      'Relative Retention Time',
+                      'Analyte Integration Quality',
+                      'Analyte Peak Height (cps)',
+                      'Analyte Peak Width at 50% Height (min)',
+                      'height_ratio',
+                      'area_ratio',
+                      'Analyte Start Time (min)',
+                      'Analyte Stop Time (min)']
 
     all_df = Data('../data/merged_df.csv', 'All', cols_drop_list)
     myclo_df = Data('../data/merged_df_myclo.csv', 'Myclobutanil',

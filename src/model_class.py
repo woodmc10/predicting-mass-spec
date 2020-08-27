@@ -4,12 +4,13 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import recall_score, f1_score, roc_curve, make_scorer
+from sklearn.metrics import recall_score, f1_score, roc_curve, make_scorer, classification_report
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.ensemble import RandomForestClassifier
 from data_class import Data
 import statsmodels.api as sm
 from scipy.stats import uniform, randint
+
 
 class Model(object):
     '''class to store the pipeline and metric for creating and evaluting
@@ -24,11 +25,11 @@ class Model(object):
         self.model = model
         self.metric = metric
         self.pipeline = Pipeline([('scaler', StandardScaler()),
-                                  ('log', self.model)])
+                                  ('model', self.model)])
 
     def fit(self, X, y):
         self.pipeline.fit(X, y)
-    
+
     def log_coef_(self):
         return self.model.coef_
 
@@ -38,68 +39,179 @@ class Model(object):
     def predict_proba(self, X):
         return self.pipeline.predict_proba(X)
 
+    def hyper_search(self, search_dict, X, y):
+        '''Randomized Search CV
+        Parameters
+        ----------
+        search_dict: dict
+            dictionary of search terms and values for the model's
+            hyperparameters
+        X: numpy array
+            array of features for training
+        y: numpy array
+            array of targets
+
+        Return
+        ------
+        best_params_: dict
+            dictionary of the parameters that had the best score
+        '''
+        scorer = make_scorer(self.metric)
+        clf = RandomizedSearchCV(self.model, search_dict, n_iter=100,
+                                 verbose=0, scoring=scorer, n_jobs=-1,
+                                 random_state=32)
+        search = clf.fit(X, y)
+        return search.best_params_
+
     def score_metric(self, X, y, thresh=0.5):
+        '''Determine the score of the model based on the model's metric
+        Parameters
+        ----------
+        X: numpy array
+            array of features
+        y: numpy array
+            array of targets
+        thresh: float
+            threshold value between 0 and 1 to use for classification
+
+        Return
+        ------
+        score from the metric
+        '''
         y_prob = self.predict_proba(X)[:, 1]
         y_pred = (y_prob >= thresh).astype(int)
         return self.metric(y, y_pred)
 
+    def summary(self, X, y, thresh=None):
+        '''Create model summary from classification report
+        Parameters
+        ----------
+        X: numpy array
+            array of features
+        y: numpy array
+            array of targets
+        thresh: float
+            threshold to use for predictions, leave as none if
+            best threshold has been determined for model
+
+        Return
+        ------
+        report_df: DataFrame
+            classification report as pandas dataframe
+        '''
+        if thresh is None:
+            if self.best_thresh is None:
+                thresh = 0.5
+            else:
+                thresh = self.best_thresh
+        y_prob = self.predict_proba(X)[:, 1]
+        y_pred = (y_prob >= thresh).astype(int)
+        report = classification_report(y, y_pred, output_dict=True)
+        report_df = pd.DataFrame(report).T
+        return report_df
+
     def roc(self, X, y):
+        '''Create array of false positive rate and true positive rate for
+        every threshold returned from predict_proba
+        Parameters
+        ----------
+        X: numpy array
+            array of features
+        y: numpy array
+            array of targets
+
+        Return
+        ------
+        fpr: numpy array
+            array of false positive rates calculated at each threshold
+        tpr: numpy array
+            array of true positive rates calculated at each threshold
+        '''
         y_probs = self.predict_proba(X)[:, 1]
         fpr, tpr, thresholds = roc_curve(y, y_probs)
         return fpr, tpr
-    
+
     def roc_plot(self, X, y, ax, label):
+        '''Plot fpr vs tpr
+        Parameters
+        ----------
+        X: numpy array
+            array of features
+        y: numpy array
+            array of tagets
+        ax: matplotlib axes
+            axes for plotting curve
+        label: string
+            text label for curve
+
+        Return
+        ------
+        ax: matplotlib axes
+            axes with plotted roc curve
+        '''
         fpr, tpr = self.roc(X, y)
         ax.plot(fpr, tpr, label=label)
         return ax
 
     def thresh_plot(self, X, y, ax, label):
+        '''Plot threshold vs score of class metric
+        Parameters
+        ----------
+        X: numpy array
+            array of features
+        y: numpy array
+            array of tagets
+        ax: matplotlib axes
+            axes for plotting curve
+        label: string
+            text label for curve
+
+        Return
+        ------
+        ax: matplotlib axes
+            axes with plotted threshold curve
+        best_thresh: float
+            threshold that optimizes the model's metric
+        '''
         y_probs = self.predict_proba(X)[:, 1]
         thresholds = np.linspace(0, 1, 51)
         metrics = [self.score_metric(X, y, thresh) for thresh in thresholds]
         ax.plot(thresholds, metrics, label=label)
-        best_thresh = thresholds[np.argmax(metrics)]
-        return ax, best_thresh
+        self.best_thresh = thresholds[np.argmax(metrics)]
+        return ax, self.best_thresh
 
 
 if __name__ == '__main__':
     cols_drop_list = ['Analyte Start Scan', 'Analyte Stop Scan',
-                        'Analyte Centroid Location (min)',
-                        'Relative Retention Time',
-                        'Analyte Integration Quality',
-                        # 'Analyte Peak Area (counts)',
-                        'Analyte Peak Height (cps)',
-                        # 'Analyte Peak Width (min)',
-                        'Analyte Peak Width at 50% Height (min)',
-                        'height_ratio',
-                        'area_ratio',
-                        'Analyte Start Time (min)',
-                        'Analyte Stop Time (min)']
+                      'Analyte Centroid Location (min)',
+                      'Relative Retention Time',
+                      'Analyte Integration Quality',
+                      'Analyte Peak Height (cps)',
+                      'Analyte Peak Width at 50% Height (min)',
+                      'height_ratio',
+                      'area_ratio',
+                      'Analyte Start Time (min)',
+                      'Analyte Stop Time (min)']
 
     all_df = Data('../data/merged_df.csv', 'All', cols_drop_list)
     # print(variance_factor(all_df.limited_df).to_markdown())
     X, y = Data.pop_reported(all_df.limited_df)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33,
+                                                        stratify=y,
+                                                        random_state=42)
 
     logistic = LogisticRegression(solver='saga', class_weight='balanced')
+    Log = Model(logistic, f1_score)
     distributions = dict(C=uniform(loc=0, scale=4),
                          penalty=['l2', 'l1', 'elasticnet', 'none'],
                          l1_ratio=uniform())
-    scorer = make_scorer(recall_score)
-    clf = RandomizedSearchCV(logistic, distributions, n_iter=100, verbose=0,
-                             scoring=scorer, n_jobs=-1, random_state=0)
-    search = clf.fit(X, y)
-    print(search.best_params_, '\n---\n---\n---')
-    # {'C': 2.195254015709299, 'l1_ratio': 0.7151893663724195, 'penalty': 'none'} -- limited
-    #{'C': 2.195254015709299, 'l1_ratio': 0.7151893663724195, 'penalty': 'none'} -- full
+    print(Log.hyper_search(distributions, X_train, y_train))
 
-    random_forest = RandomForestClassifier(class_weight='balanced', verbose=0)
+    random_forest = RandomForestClassifier(class_weight='balanced_subsample',
+                                           random_state=43)
+    RF = Model(random_forest, f1_score)
     distributions_rf = dict(n_estimators=[10, 50, 100, 200],
-                         max_features=['auto', 'sqrt', 'log2', None],
-                         min_samples_split=randint(2, 20),
-                         min_samples_leaf=uniform(0, 0.5))
-    clf_rf = RandomizedSearchCV(random_forest, distributions_rf, n_iter=100,
-                             scoring=scorer, n_jobs=-1, random_state=0)
-    search_rf = clf_rf.fit(X, y)
-    print(search_rf.best_params_, '\n---\n---\n---')
-    #{'max_features': None, 'min_samples_leaf': 0.3175294368017819, 'min_samples_split': 14, 'n_estimators': 10}  -- limited
-    #{'max_features': None, 'min_samples_leaf': 0.3117550505659341, 'min_samples_split': 17, 'n_estimators': 50}  -- full
+                            max_features=['auto', 'sqrt', 'log2', None],
+                            min_samples_split=randint(2, 20),
+                            min_samples_leaf=uniform(0, 0.5))
+    print(RF.hyper_search(distributions_rf, X_train, y_train))
