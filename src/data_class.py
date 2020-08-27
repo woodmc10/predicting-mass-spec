@@ -80,8 +80,19 @@ class Data(object):
         return df_short
 
 
-if __name__ == '__main__':
-
+def create_data(file, analytes):
+    '''Create data class object containing data
+    Parameters
+    ----------
+    file: string
+        file name containing data from pipeline
+    analytes: string
+        list of analytes included in data
+        'All' for all analytes or analyte name for single analyte
+    Return
+    ------
+    data_class: Data class object
+    '''
     cols_drop_list = ['Analyte Start Scan', 'Analyte Stop Scan',
                       'Analyte Centroid Location (min)',
                       'Relative Retention Time',
@@ -93,7 +104,12 @@ if __name__ == '__main__':
                       'Analyte Start Time (min)',
                       'Analyte Stop Time (min)']
 
-    all_df = Data('../data/merged_df.csv', 'All', cols_drop_list)
-    myclo_df = Data('../data/merged_df_myclo.csv', 'Myclobutanil',
-                    cols_drop_list)
+    data_class = Data(file, analytes, cols_drop_list)
+    return data_class
+
+
+if __name__ == '__main__':
+
+    all_df = create_data('../data/merged_df.csv', 'All')
+    myclo_df = create_data('../data/merged_df_myclo.csv', 'Myclobutanil')
     print(myclo_df.analytes)

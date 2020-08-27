@@ -7,8 +7,9 @@ from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import Lasso
 from sklearn.metrics import recall_score, f1_score
-from data_class import Data
+from data_class import Data, create_data
 from model_class import Model
+
 
 def pca_plots(df):
     '''Generate scree plot, 2D pca plot, and 3D pca plot for the data
@@ -16,7 +17,6 @@ def pca_plots(df):
     ---------
     df: DataFrame
         dataframe containing the reported target
-    
     Return
     ------
     None
@@ -52,18 +52,14 @@ def scree_plot(ax, pca, n_components_to_plot=8, title=None):
     """Make a scree plot showing the variance explained (i.e. variance
     of the projections) for the principal components in a fit sklearn
     PCA object.
-    
     Parameters
     ----------
     ax: matplotlib.axis object
       The axis to make the scree plot on.
-      
     pca: sklearn.decomposition.PCA object.
       A fit PCA object.
-      
     n_components_to_plot: int
       The number of principal components to display in the scree plot.
-      
     title: str
       A title for the scree plot.
     """
@@ -74,11 +70,11 @@ def scree_plot(ax, pca, n_components_to_plot=8, title=None):
     ax.scatter(ind, vals, color='blue', s=50, alpha=0.5)
 
     for i in range(num_components):
-        ax.annotate(r"{:2.2f}%".format(vals[i]), 
-               (ind[i]+0.2, vals[i]+0.005), 
-               va="bottom", 
-               ha="center", 
-               fontsize=12)
+        ax.annotate(r"{:2.2f}%".format(vals[i]),
+                    (ind[i]+0.2, vals[i]+0.005),
+                    va="bottom",
+                    ha="center",
+                    fontsize=12)
 
     ax.set_xticklabels(ind, fontsize=12)
     ax.set_ylim(0, max(vals) + 0.05)
@@ -90,45 +86,38 @@ def scree_plot(ax, pca, n_components_to_plot=8, title=None):
 
 def plot_mnist_embedding(ax, X, y, tight=False, title=None):
     """Plot 2D pca.
-    
     Parameters
     ----------
     ax: matplotlib.axis object
       The axis to make the scree plot on.
-      
     X: numpy.array, shape (n, 2)
       A two dimensional array containing the coordinates of the embedding.
-      
     y: numpy.array
-      The labels of the datapoints.  Should be digits.
-
+      The labels of the datapoints.  Should be digits
     tight: bool
       If true use a tighter window to plot
-      
     title: str
       A title for the plot.
     """
     x_min, x_max = np.min(X, 0), np.max(X, 0)
     X = (X - x_min) / (x_max - x_min)
-    y_map = np.where(y==1, '+', '-')
-    y_c_map = np.where(y==1, 'g', 'r')
+    y_map = np.where(y == 1, '+', '-')
+    y_c_map = np.where(y == 1, 'g', 'r')
     ax.patch.set_visible(False)
     for i in range(X.shape[0]):
-        plt.text(X[i, 0], X[i, 1], 
-                 y_map[i], 
-                 color=y_c_map[i], 
+        plt.text(X[i, 0], X[i, 1],
+                 y_map[i],
+                 color=y_c_map[i],
                  fontdict={'weight': 'bold', 'size': 12},
                  alpha=0.3)
-    # ax.set_xticks([]), 
-    # ax.set_yticks([])
     ax.set_xlabel('Principal Component 1')
     ax.set_ylabel('Principal Component 2')
     ax.set_title('Principal Component Analysis', fontsize=16)
     if tight:
-        ax.set_ylim([0, 0.4]) 
-        ax.set_xlim([0, 0.4]) 
+        ax.set_ylim([0, 0.4])
+        ax.set_xlim([0, 0.4])
     else:
-        ax.set_ylim([-0.1, 1.1]) 
+        ax.set_ylim([-0.1, 1.1])
         ax.set_xlim([-0.1, 1.1])
 
 
@@ -147,12 +136,15 @@ def pca_3d(fig, df, X_scale, y, pca_3):
     pca_3: sklearn.decomposition.PCA object.
       A fit PCA object.
     '''
-    result = pd.DataFrame(pca_3.transform(X_scale), columns=['PCA%i' % i for i in range(3)], index=df.index)
-    y_map = np.where(y==1, '+', '_')
-    y_c_map = np.where(y==1, 'g', 'r')
+    result = pd.DataFrame(pca_3.transform(X_scale),
+                          columns=['PCA%i' % i for i in range(3)],
+                          index=df.index)
+    y_map = np.where(y == 1, '+', '_')
+    y_c_map = np.where(y == 1, 'g', 'r')
 
     ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(result['PCA0'], result['PCA1'], result['PCA2'], c=y_c_map, marker='x', alpha=0.3)
+    ax.scatter(result['PCA0'], result['PCA1'], result['PCA2'],
+               c=y_c_map, marker='x', alpha=0.3)
 
     xAxisLine = ((min(result['PCA0']), max(result['PCA0'])), (0, 0), (0, 0))
     ax.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'r')
@@ -171,7 +163,6 @@ def pca_3d(fig, df, X_scale, y, pca_3):
 def compound_bar_plot(df, save=False):
     ''''Plot a stacked bar plot with each bar representing the number of
     data points for each analyte separated into reported and unreported
-
     Parameters
     ----------
     df: DataFrame
@@ -196,7 +187,7 @@ def compound_bar_plot(df, save=False):
     plt.ylabel('Chromatograms')
     plt.tight_layout()
     plt.legend(['Not Reported', 'Reported'])
-    if save == True:
+    if save:
         plt.savefig('../images/compound_bar.png')
 
 
@@ -212,7 +203,6 @@ def scatter_plots(df, list_pairs, save=False):
         if true then save, if false then show plot
     '''
     fig = plt.figure(figsize=(10, 8))
-    # fig.suptitle('Scatter Plots')
     for num, pair in enumerate(list_pairs):
         ax = fig.add_subplot(2, 2, num + 1)
         x = df[pair[0]]
@@ -226,16 +216,15 @@ def scatter_plots(df, list_pairs, save=False):
     else:
         plt.show()
 
+
 def lasso_plot(data, save=False):
     '''Plot the lasso regularization of all the features at different
     learning rates.
     Parameters
     ----------
     data: Data class object
-        
     save: bool
         If true, save figure. If false, show figure
-    
     Return
     ------
     None
@@ -266,7 +255,7 @@ def lasso_plot(data, save=False):
     cmap = plt.cm.get_cmap('tab20')
     for label, coef in sorted_zip:
         if np.max(coef) > 0.1 or np.min(coef) < -0.1:
-            color = counter * 2 
+            color = counter * 2
             counter += 1
         else:
             color = 1
@@ -282,29 +271,19 @@ def lasso_plot(data, save=False):
     else:
         plt.show()
 
+
 if __name__ == '__main__':
 
-    cols_drop_list = ['Analyte Start Scan', 'Analyte Stop Scan',
-                        'Analyte Centroid Location (min)',
-                        'Relative Retention Time',
-                        'Analyte Integration Quality',
-                        'Analyte Peak Height (cps)',
-                        'Analyte Peak Width at 50% Height (min)',
-                        'height_ratio',
-                        'area_ratio',
-                        'Analyte Start Time (min)',
-                        'Analyte Stop Time (min)']
+    all_df = create_data('../data/merged_df.csv', 'All')
 
-    all_df = Data('../data/merged_df.csv', 'All', cols_drop_list)
-    
     pairs = [('Relative Retention Time', 'Analyte Centroid Location (min)'),
              ('Analyte Peak Area (counts)', 'Analyte Peak Height (cps)'),
-             ('area_ratio', 'height_ratio'), 
+             ('area_ratio', 'height_ratio'),
              ('Analyte Peak Width (min)',
               'Analyte Peak Width at 50% Height (min)')]
-    # scatter_plots(all_df.full_df, pairs, save=False)
+    scatter_plots(all_df.full_df, pairs, save=False)
 
-    # pca_plots(all_df.full_df)
+    pca_plots(all_df.full_df)
 
     lasso_plot(all_df)
 

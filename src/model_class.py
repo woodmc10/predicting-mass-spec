@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import recall_score, f1_score, roc_curve, make_scorer, classification_report
+from sklearn.metrics import (recall_score, f1_score, roc_curve,
+                             make_scorer, classification_report)
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.ensemble import RandomForestClassifier
 from data_class import Data
@@ -182,31 +183,20 @@ class Model(object):
 
 
 if __name__ == '__main__':
-    cols_drop_list = ['Analyte Start Scan', 'Analyte Stop Scan',
-                      'Analyte Centroid Location (min)',
-                      'Relative Retention Time',
-                      'Analyte Integration Quality',
-                      'Analyte Peak Height (cps)',
-                      'Analyte Peak Width at 50% Height (min)',
-                      'height_ratio',
-                      'area_ratio',
-                      'Analyte Start Time (min)',
-                      'Analyte Stop Time (min)']
+    all_df = create_data('../data/merged_df.csv', 'All')
+    print(variance_factor(all_df.limited_df).to_markdown())
 
-    all_df = Data('../data/merged_df.csv', 'All', cols_drop_list)
-    # print(variance_factor(all_df.limited_df).to_markdown())
+    # logistic regression and random forest models - find best params
     X, y = Data.pop_reported(all_df.limited_df)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33,
                                                         stratify=y,
                                                         random_state=42)
-
     logistic = LogisticRegression(solver='saga', class_weight='balanced')
     Log = Model(logistic, f1_score)
     distributions = dict(C=uniform(loc=0, scale=4),
                          penalty=['l2', 'l1', 'elasticnet', 'none'],
                          l1_ratio=uniform())
     print(Log.hyper_search(distributions, X_train, y_train))
-
     random_forest = RandomForestClassifier(class_weight='balanced_subsample',
                                            random_state=43)
     RF = Model(random_forest, f1_score)

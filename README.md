@@ -9,7 +9,7 @@ https://planetorbitrap.com/targeted-screening-and-quantitation-of-food-contamina
 
 Pesticide testing is one of many applications for analytical chemistry and there are many different items that may need to be tested for pesticides. These include organic produce, hay fed to livestock, turf from children's sports fields, and many other applications. When a sample is sent into the lab the pesticides must be extracted away from any other material in the sample. The extraction process helps to reduce interferences and improve signal when the sample is injected on the instrument. After the extraction process the samples are loaded onto instruments that can separate and identify the pesticides. 
 
-![chrom_gif](https://upload.wikimedia.org/wikipedia/commons/c/c5/Analytical_Gas_Chromatography_A.gif)
+![chrom_gif](images/chrom.gif)
 GIF 1: Animation of chromatography
 https://en.wikipedia.org/wiki/File:Analytical_Gas_Chromatography_A.gif
 
