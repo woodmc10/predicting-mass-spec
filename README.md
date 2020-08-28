@@ -1,8 +1,8 @@
-# Motivation
+# Predicting Reported Results from Chromatograms
+## Motivation
 Analytical chemistry consists of extracting analytes of interest from samples and then analyzing on instruments and processing the data from this instrumental analysis. For some screening methods chemists evaluate thousands of chromatograms every day looking for possible positives. Depending on the method chemists can spend hours looking at chromatography. My goal is to use the data from the instruments to generate a model to predict positive results from chromatograms. If a model can predict positives with a low number of false negatives it could drastically reduce the amount of time chemists have to spend evaluating chromatograms. 
 
-# Introduction to Analytical Chemistry
-## Workflow
+## Introduction to Analytical Chemistry
 ![pesticide_analysis](images/chem_workflow.png)
 Figure 1: Process of pesticide analysis from application to instrumental analysis
 https://planetorbitrap.com/targeted-screening-and-quantitation-of-food-contaminants
