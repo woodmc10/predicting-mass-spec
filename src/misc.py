@@ -160,17 +160,36 @@ def feature_comparison(columns, coefs, features, save=False):
     '''
     sort_coefs, sort_no_a_coefs, sort_d_coefs = sort_columns(columns, coefs)
     sort_feat, sort_no_a_feat, sort_d_feat = sort_columns(columns, features)
+    pos_coefs = [0 if coef < 0 else coef for coef in sort_coefs]
+    pos_no_a_coefs = [0 if coef < 0 else coef for coef in sort_no_a_coefs]
     colors = ['r' if coef < 0 else 'g' for coef in sort_coefs]
     fig, axes = plt.subplots(1, 2, figsize=(12, 6))
     importance_plot(axes[0], sort_coefs, sort_no_a_coefs, colors)
+    importance_plot(axes[0], pos_coefs, pos_no_a_coefs, 'green')
     axes[0].set_xlabel('Coefficient Value', fontsize=14)
     axes[0].set_yticklabels(sort_d_coefs, fontsize=12)
     axes[0].set_title('Logistic Regression', fontsize=16)
+    axes[0].legend()
+    handles, labels = axes[0].get_legend_handles_labels()
+    order1 = [1, 0]
+    l1 = axes[0].legend([handles[idx] for idx in order1],
+                        [labels[idx] for idx in order1],
+                        loc='lower right', title='Negative Coefficients')
+    order2 = [3, 2]
+    axes[0].legend([handles[idx] for idx in order2],
+                   [labels[idx] for idx in order2],
+                   loc='lower right', title='Positive Coefficients',
+                   bbox_to_anchor=(1, 0.2))
+    axes[0].add_artist(l1)
     importance_plot(axes[1], sort_feat, sort_no_a_feat, 'orange')
     axes[1].set_xlabel('Feature Importance', fontsize=14)
     axes[1].set_yticks(list(range(len(features))))
     axes[1].set_yticklabels(sort_d_feat, fontsize=12)
     axes[1].set_title('Random Forest', fontsize=16)
+    handles, labels = plt.gca().get_legend_handles_labels()
+    order = [1, 0]
+    plt.legend([handles[idx] for idx in order],[labels[idx] for idx in order],
+               loc='lower right')
     plt.tight_layout()
     if save:
         plt.savefig('../images/coef_features.png')
@@ -196,9 +215,9 @@ def importance_plot(ax, all_vals, no_analyte, colors):
         axes with plot
     '''
     ax.barh(list(range(len(all_vals))), np.abs(all_vals), color=colors,
-            alpha=0.2)
+            alpha=0.1, label='Categorical Features')
     ax.barh(list(range(len(all_vals))), np.abs(no_analyte), color=colors,
-            alpha=0.7)
+            alpha=0.7, label='Continuous Features')
     ax.set_yticks(list(range(len(all_vals))))
     return ax
 

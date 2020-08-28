@@ -92,13 +92,16 @@ Figure 6: ROC curve and F1 score comparison over various thresholds for logistic
  The coefficients and the feature importances of the models were compared to see if the models were assigning similar weight to the features. The area of the peak was the most important feature for both models, but the logistic regression put much more weight on the different analytes than the random forest did. The random forest put almost no weight on any of the analyte features. This could be due to the nature of random forest feature importance calculation having an impact from the number of times a feature is used for a split. Since all of the analyte features are one hot encoded categorical features the random forest can split on these features a maximum of one time making them less important than the other continuous features. 
 
 ![importance](images/coef_features.png)
+Figure 7: Coefficient Values and Feature Importances
 
+The coefficients assigned by the logistic regression follow the importance a chemist would put on these features. The peak area is used to calculate the concentration and all of the pesticide have concentration thresholds, where samples are not reported if they do not exceed the threshold. The peak width is part of the calculation for peak area, and thus reltaed to concentration. The difference between the observed retention time and the expected retention time is the highest negative coefficient. This also makes sense because the further the peak is from the expected retention time the less likely it is to be the compound of interest and more likely to be an interference that would not be reported. Peak assymetry and baseline slope are both features that describe the appearance of the peak. These features are likely to increase with noisy peak integration that would be less likely to be reported.
 
 # Conclusion
 Both the logistic regression and random forest models are finding signal to classify the chromatograms. The peak area is the most important feature for both models. Many of the chromatograms with integrated peaks are finding the analyte of interest, but the concentration in the unreported samples is below the reporting limit. Since the area is directly related to the concentration it is not surprising that these models are putting a large weight on that feature. 
 
 ## Future Work
 - Determine F-statistic and p-values for logistic regressions
+- Create partial dependence plots for the random forest
 - Identify incorrectly classified chromatograms to determine what is causing problems for the models
 - Repeat logistic and random forest modeling with all features to see if predictions improve
 - Try other classification algorithms including Neural Nets
