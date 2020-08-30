@@ -62,7 +62,7 @@ class Model(object):
                                  verbose=0, scoring=scorer, n_jobs=-1,
                                  random_state=32)
         search = clf.fit(X, y)
-        return search.best_params_
+        return search.best_params_, search.best_score_
 
     def score_metric(self, X, y, thresh=0.5):
         '''Determine the score of the model based on the model's metric
@@ -190,7 +190,7 @@ if __name__ == '__main__':
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33,
                                                         stratify=y,
                                                         random_state=42)
-    logistic = LogisticRegression(solver='saga', class_weight='balanced')
+    logistic = LogisticRegression(class_weight='balanced')
     Log = Model(logistic, f1_score)
     distributions = dict(C=uniform(loc=0, scale=4),
                          penalty=['l2', 'l1', 'elasticnet', 'none'],

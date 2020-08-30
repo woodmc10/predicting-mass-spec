@@ -262,7 +262,7 @@ def lasso_plot(data, save=False):
         ax.plot(alphas, np.array(coef), label=label, c=cmap(color))
     ax.set_xscale('log')
     ax.set_xlabel('Learning Rate', fontsize=14)
-    ax.set_ylabel('Weights', fontsize=14)
+    ax.set_ylabel('Coefficients', fontsize=14)
     ax.set_title('Lasso Feature Engineering', fontsize=16)
     ax.legend(loc=1)
     if save:
@@ -280,9 +280,9 @@ if __name__ == '__main__':
              ('area_ratio', 'height_ratio'),
              ('Analyte Peak Width (min)',
               'Analyte Peak Width at 50% Height (min)')]
-    scatter_plots(all_df.full_df, pairs, save=False)
+    # scatter_plots(all_df.full_df, pairs, save=False)
 
-    pca_plots(all_df.full_df)
+    # pca_plots(all_df.full_df)
 
     lasso_plot(all_df)
 
