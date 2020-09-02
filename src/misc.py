@@ -75,6 +75,8 @@ def compare_models(model_list, metric, X, y, thresh=0.5, plot=True):
 
         print(model[1])
         print(mod.summary(X_test, y_test))
+    axes[0].plot([0, 1], [0, 1], color='navy', linestyle='--',
+                 label='Random Chance')
     axes[0].set_xlabel('False Positive Rate')
     axes[0].set_ylabel('True Positive Rate')
     axes[0].set_title('ROC Curve')

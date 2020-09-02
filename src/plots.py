@@ -216,7 +216,7 @@ def scatter_plots(df, list_pairs, save=False):
         plt.show()
 
 
-def lasso_plot(data, save=False):
+def lasso_plot(data, pairs, save=False):
     '''Plot the lasso regularization of all the features at different
     learning rates.
     Parameters
@@ -228,7 +228,7 @@ def lasso_plot(data, save=False):
     ------
     None
     '''
-    X, y = Data.pop_reported(data.limited_df)
+    X, y = Data.pop_reported(data.full_df)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33,
                                                         random_state=42)
     # Get weights from lasso model for 50 different alphas
@@ -240,35 +240,53 @@ def lasso_plot(data, save=False):
         mod = Model(lasso, f1_score)
         mod.fit(X_train, y_train)
         coefs.append(mod.log_coef_())
-    coefs = np.array(coefs)
-
-    # Zip the column names and weights together for plot labels
-    labels = data.limited_df.drop('reported', axis=1).columns
-    zipped = zip(labels, coefs.T)
-    zipped = list(zipped)
-    sorted_zip = sorted(zipped, key=lambda x: np.abs(x[1][0]))
+    coefs = np.array(coefs).T
+    labels = data.full_df.drop('reported', axis=1).columns
+    
+    # Get colors for plotting
     counter = 0
-
-    # Plot all weights, keep less important weights in background/gray
-    fig, ax = plt.subplots(figsize=(12, 8))
     cmap = plt.cm.get_cmap('tab20')
-    for label, coef in sorted_zip:
-        if np.max(coef) > 0.1 or np.min(coef) < -0.1:
+    color_list = []
+    labels_list = []
+    for index, label in enumerate(labels):
+        if np.max(coefs[index]) > 0.2 or np.min(coefs[index]) < -0.2:
             color = counter * 2
             counter += 1
+            lab = label
         else:
             color = 1
-            label = None
-        ax.plot(alphas, np.array(coef), label=label, c=cmap(color))
-    ax.set_xscale('log')
-    ax.set_xlabel('Learning Rate', fontsize=14)
-    ax.set_ylabel('Coefficients', fontsize=14)
-    ax.set_title('Lasso Feature Engineering', fontsize=16)
-    ax.legend(loc=1)
-    if save:
-        plt.savefig('../images/lasso.png')
-    else:
-        plt.show()
+            lab = None
+        color_list.append(color)
+        labels_list.append(lab)
+
+    # Zip the column names and weights together for plot labels
+    zipped = zip(labels_list, coefs, color_list)
+    zipped = list(zipped)
+    sorted_zip = sorted(zipped, key=lambda x: np.abs(x[1][0]))
+
+    # Plot all weights, keep less important weights in background/gray
+    for i in range(len(pairs) + 1):
+        if i < len(pairs):
+            fig, ax = plt.subplots(figsize=(12, 8))
+            for label, coef, color in sorted_zip:
+                if label not in pairs[i]:
+                    ax.plot(alphas, np.array(coef), label=None, c=cmap(1))
+            for label, coef, color in sorted_zip:
+                if label in pairs[i]:
+                    ax.plot(alphas, np.array(coef), label=label, c=cmap(color))
+        else:
+            fig, ax = plt.subplots(figsize=(12, 8))
+            for label, coef, color in sorted_zip:
+                ax.plot(alphas, np.array(coef), label=label, c=cmap(color))
+        ax.set_xscale('log')
+        ax.set_xlabel('Learning Rate', fontsize=14)
+        ax.set_ylabel('Coefficients', fontsize=14)
+        ax.set_title('Lasso Feature Engineering', fontsize=16)
+        ax.legend(loc=1)
+        if save:
+            plt.savefig('../images/lasso_pair' + str(i) + '.png')
+        else:
+            plt.show()
 
 
 if __name__ == '__main__':
@@ -284,8 +302,7 @@ if __name__ == '__main__':
 
     # pca_plots(all_df.full_df)
 
-    lasso_plot(all_df)
+    lasso_plot(all_df, pairs, save=True)
 
     var_corr = all_df.limited_no_analyte_df.corr()
     sns.heatmap(var_corr)
-    plt.show()
