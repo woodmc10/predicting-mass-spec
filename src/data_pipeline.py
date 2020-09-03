@@ -80,20 +80,28 @@ def merge(directory, cols):
         dataframe from all txt files filtered to only contain columns
         in the cols list
     '''
-    count = 0
-    for entry in os.scandir(directory):
-        if entry.path.endswith(".txt") and entry.is_file():
-            df = import_single(entry)
-            reduced_df = reduce_df(df, cols)
-        if count == 0:
-            merged_df = reduced_df
-        else:
-            merged_df = merged_df.append(reduced_df)
-        count += 1
-    return merged_df
+    
+    
+    
+    # count = 0
+    # for entry in os.scandir(directory):
+    #     # breakpoint()
+    #     if entry.path.endswith(".txt") and entry.is_file():
+    #         df = import_single(entry)
+    #         reduced_df = reduce_df(df, cols)
+    #     if count == 0:
+    #         merged_df = reduced_df
+    #     else:
+    #         merged_df = merged_df.append(reduced_df)
+    #     count += 1
+    return None
+
+def files_from_dir(directory):
+    return [entry for entry in os.scandir(directory)
+            if entry.name.endswith('.txt') and entry.is_file()]
 
 
-def import_single(file):
+def files_to_dfs(files):
     '''
     Read a single file into a pandas dataframe
     Parameters
@@ -105,11 +113,19 @@ def import_single(file):
     df_sub: DataFrame
         dataframe containing only sample information
     '''
-    df = pd.read_csv(file, skip_blank_lines=False)
-    start_row = df[df.iloc[:, 0].str.startswith('Sample Name',
-                                                na=False)].index[0]
-    df_sub = pd.read_csv(file, delimiter='\t', skiprows=start_row)
-    return df_sub
+    df_list = []
+    for file in files:
+        try:
+            df = pd.read_csv(file, skip_blank_lines=False)
+            #TODO: try to filter df without reading in twice
+            start_row = df[df.iloc[:, 0].str.startswith('Sample Name',
+                                                        na=False)].index[0]
+            df_sub = pd.read_csv(file, delimiter='\t', skiprows=start_row)
+            # breakpoint()
+            df_list.append(df_sub)
+        except:
+            print(f'😱{file} caused an error, check the file.')
+    return df_list
 
 
 def reduce_df(df, cols):

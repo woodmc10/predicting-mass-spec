@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+from matplotlib.lines import Line2D
 import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
@@ -105,7 +107,7 @@ def plot_mnist_embedding(ax, X, y, tight=False, title=None):
     y_c_map = np.where(y == 1, 'g', 'r')
     ax.patch.set_visible(False)
     for i in range(X.shape[0]):
-        plt.text(X[i, 0], X[i, 1],
+        ax.text(X[i, 0], X[i, 1],
                  y_map[i],
                  color=y_c_map[i],
                  fontdict={'weight': 'bold', 'size': 12},
@@ -113,6 +115,17 @@ def plot_mnist_embedding(ax, X, y, tight=False, title=None):
     ax.set_xlabel('Principal Component 1')
     ax.set_ylabel('Principal Component 2')
     ax.set_title('Principal Component Analysis', fontsize=16)
+    # red_minus = mpatches.Patch(color='red', hatch='-', alpha=0.3,
+    #             label='Not Reported')
+    # green_plus = mpatches.Patch(color='green', hatch='+', alpha=0.3,
+    #              label='Reported')
+    red_minus = Line2D([0], [0], color='red', ls='',
+                       marker='_', alpha=0.3,
+                       label='Not Reported')
+    green_plus = Line2D([0], [0], color='g', ls='',
+                        marker='+', alpha=0.3,
+                        label='Reported')
+    ax.legend(handles=[green_plus, red_minus])
     if tight:
         ax.set_ylim([0, 0.4])
         ax.set_xlim([0, 0.4])
@@ -300,9 +313,9 @@ if __name__ == '__main__':
               'Analyte Peak Width at 50% Height (min)')]
     # scatter_plots(all_df.full_df, pairs, save=False)
 
-    # pca_plots(all_df.full_df)
+    pca_plots(all_df.full_df)
 
-    lasso_plot(all_df, pairs, save=True)
+    # lasso_plot(all_df, pairs)
 
     var_corr = all_df.limited_no_analyte_df.corr()
     sns.heatmap(var_corr)
