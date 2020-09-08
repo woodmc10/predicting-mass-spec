@@ -13,6 +13,7 @@ import statsmodels.api as sm
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from data_class import Data, create_data
 from model_class import Model
+from xgboost import XGBClassifier
 
 
 def variance_factor(df):
@@ -35,7 +36,7 @@ def variance_factor(df):
     return sorted_vif
 
 
-def compare_models(model_list, metric, X, y, thresh=0.5, plot=True):
+def compare_models(model_list, metric, X, y, thresh=0.5, save=False):
     '''Generate ROC curves, threshold plots, and print out metric scores
     Parameters
     ----------
@@ -66,10 +67,9 @@ def compare_models(model_list, metric, X, y, thresh=0.5, plot=True):
     for model in model_list:
         mod = Model(model[0], metric)
         mod.fit(X_train, y_train)
-        if plot:
-            axes[0] = mod.roc_plot(X_test, y_test, axes[0], model[1])
-            axes[1], thresh = mod.thresh_plot(X_test, y_test,
-                                              axes[1], model[1])
+        axes[0] = mod.roc_plot(X_test, y_test, axes[0], model[1])
+        axes[1], thresh = mod.thresh_plot(X_test, y_test,
+                                            axes[1], model[1])
         result = mod.score_metric(X_test, y_test, thresh)
         metric_result.append((model[1], result.round(2)))
 
@@ -84,8 +84,10 @@ def compare_models(model_list, metric, X, y, thresh=0.5, plot=True):
     axes[1].set_xlabel('Threshold')
     axes[1].set_ylabel('F1 Score')
     axes[1].set_title('Threshold Comparison')
-    plt.savefig('../images/roc_f1.png')
-    plt.show()
+    if save:
+        plt.savefig('../images/roc_f1.png')
+    else:
+        plt.show()
     return metric_result, model_list
 
 
@@ -226,24 +228,40 @@ def importance_plot(ax, all_vals, no_analyte, colors):
 
 if __name__ == '__main__':
     all_df = create_data('../data/merged_df.csv', 'All')
-    print(variance_factor(all_df.limited_df))
+    print(variance_factor(all_df.full_df))
 
     # compare best models from random search
-    X, y = Data.pop_reported(all_df.limited_df)
+    X, y = Data.pop_reported(all_df.full_df)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33,
                                                         stratify=y,
                                                         random_state=42)
     lr = LogisticRegression(penalty='none', class_weight='balanced',
                             solver='saga', max_iter=100000)
     rf = RandomForestClassifier(class_weight='balanced_subsample')
-    mod_list = [(lr, 'Logistic Regression'), (rf, 'Random Forest')]
-    scores, model_list = compare_models(mod_list, f1_score, X, y)
+    xgb = XGBClassifier()
+    grad_boost = XGBClassifier(learning_rate =0.01,
+                               n_estimators=551,
+                               max_depth=6,
+                               min_child_weight=0,
+                               gamma=0.275,
+                               subsample=0.6,
+                               colsample_bytree=0.5,
+                               objective= 'binary:logistic',
+                               nthread=4,
+                               scale_pos_weight=1,
+                               reg_alpha=0.2,
+                               seed=27)
+    mod_list = [(lr, 'Logistic Regression'), (rf, 'Random Forest'),
+                (xgb, 'XGBoost Classifier'), (grad_boost, 'Tuned Boost')]
+    scores, model_list = compare_models(mod_list, f1_score, X, y, save=False)
     print(scores)
 
+    '''
     # plot feature importance and coefs
     log_complex = model_list[0][0]
     random_forest = model_list[1][0]
     coefs = log_complex.coef_[0]
     features = random_forest.feature_importances_
-    columns = all_df.limited_df.drop('reported', axis=1).columns
+    columns = all_df.full_df.drop('reported', axis=1).columns
     feature_comparison(columns, coefs, features, save=True)
+    '''

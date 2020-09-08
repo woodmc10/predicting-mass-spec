@@ -11,6 +11,8 @@ from sklearn.ensemble import RandomForestClassifier
 from data_class import Data, create_data
 import statsmodels.api as sm
 from scipy.stats import uniform, randint
+import xgboost as xgb
+from xgboost.sklearn import XGBClassifier
 
 
 class Model(object):
@@ -182,20 +184,31 @@ class Model(object):
         return ax, self.best_thresh
 
 
+def f1_eval(y_pred, dtrain):
+    y_true = dtrain.get_label()
+    err = 1-f1_score(y_true, np.round(y_pred))
+    return 'f1_err', err
+
+
 if __name__ == '__main__':
     all_df = create_data('../data/merged_df.csv', 'All')
 
     # logistic regression and random forest models - find best params
-    X, y = Data.pop_reported(all_df.limited_df)
+    X, y = Data.pop_reported(all_df.full_df)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33,
                                                         stratify=y,
                                                         random_state=42)
+    '''
     logistic = LogisticRegression(class_weight='balanced')
     Log = Model(logistic, f1_score)
     distributions = dict(C=uniform(loc=0, scale=4),
                          penalty=['l2', 'l1', 'elasticnet', 'none'],
                          l1_ratio=uniform())
     print(Log.hyper_search(distributions, X_train, y_train))
+    # ({'C': 0.5051386999960084, 'l1_ratio': 0.02384165985593545,
+    # 'penalty': 'l2'},
+    # F1 Score: 0.4851561026625747)
+
     random_forest = RandomForestClassifier(class_weight='balanced_subsample',
                                            random_state=43)
     RF = Model(random_forest, f1_score)
@@ -204,3 +217,59 @@ if __name__ == '__main__':
                             min_samples_split=randint(2, 20),
                             min_samples_leaf=uniform(0, 0.5))
     print(RF.hyper_search(distributions_rf, X_train, y_train))
+    # ({'max_features': 'auto', 'min_samples_leaf': 0.004338663070259263,
+    # 'min_samples_split': 7, 'n_estimators': 200},
+    # F1 Score: 0.7767690571695022)
+
+    grad_boost = XGBClassifier(random_state=43)
+    GB = Model(grad_boost, f1_score)
+    distributions_gb = dict(eta=[0.01, 0.025, 0.05, 0.075, 0.1, 0.125,
+                                   0.15, 0.175, 0.2, 0.225, 0.25, 0.275, 0.3],
+                            min_child_weight=[0.5, 1, 1.5, 2, 3, 5],
+                            max_depth=[3, 4, 5, 6, 7, 8, 9, 10],
+                            gamma=[0, 0.005, 0.01, 0.015, 0.02],
+                            subsample=[0.5, 0.6, 0.7, 0.8, 0.9, 1],
+                            # colsample_by_tree=[0.5, 0.6, 0.7, 0.8, 0.9, 1],
+                            reg_lambda=[0, 1e-5, 0.001, 0.005, 0.01, 0.05,
+                                        0.1, 1, 10, 100],
+                            reg_alpha=[0, 1e-5, 0.001, 0.005, 0.01, 0.05,
+                                        0.1, 1, 10, 100],
+                            scale_pos_weight=[0, 0.5, 1, 2, 3],
+                            objective=['binary:logistic', 'reg:linear',
+                                       'multi:softprob'])
+    print(GB.hyper_search(distributions_gb, X_train, y_train))
+    # ({'subsample': 0.6, 'scale_pos_weight': 1, 'reg_lambda': 0.005,
+    # 'reg_alpha': 0.01, 'objective': 'reg:linear', 'min_child_weight': 5,
+    # 'max_depth': 5, 'gamma': 0, 'eta': 0.075, 'colsample_by_tree': 1},
+    # F1 Score: 0.7961882282491608)
+    '''
+
+    grad_boost = XGBClassifier(learning_rate =0.01,
+                               n_estimators=551,
+                               max_depth=6,
+                               min_child_weight=0,
+                               gamma=0.275,
+                               subsample=0.6,
+                               colsample_bytree=0.5,
+                               objective= 'binary:logistic',
+                               nthread=4,
+                               scale_pos_weight=1,
+                               reg_alpha=0.2,
+                               seed=27)
+    xgtrain = xgb.DMatrix(X_train, y_train)
+    cv_results = xgb.cv(grad_boost.get_xgb_params(), xgtrain,
+                        metrics='aucpr', num_boost_round=5000,
+                        early_stopping_rounds=50)
+    # n_estimators=50
+    distributions_gb = dict(reg_alpha=[0.005, 0.01, 0.02, 0.03, 0.04, 0.05,
+                                       0.06, 0.07, 0.08, 0.09, 0.1, 0.2])
+    # max_depth = 6
+    # min_child_weight = 0
+    # gamma = 0.275
+    # subsample = 0.6
+    # colsample_bytree = 0.5
+    # reg_alpha = 0.01
+    GB = Model(grad_boost, f1_score)
+    print(GB.hyper_search(distributions_gb, X_train, y_train))
+    print(cv_results)
+    print(cv_results.shape)

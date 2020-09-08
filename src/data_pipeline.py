@@ -3,7 +3,8 @@ import numpy as np
 import os
 
 
-def create_reported_df(analyte='All'):
+def create_reported_df(analyte='All', path=r'../data',
+                       pos_file='../data/pest_pos.xlsx'):
     '''
     Full pipeline calling all other functions to create the final dataframe
     Parameters
@@ -32,7 +33,7 @@ def create_reported_df(analyte='All'):
                'Analyte Integration Quality', 'Relative Retention Time']
 
     # Merge all files in data folder
-    full_df = merge(r'../data', columns)
+    full_df = merge(path, columns)
 
     # Update analyte names from instrument to match analyte names from reports
     remove_list = ['-B1a', '-B1b', ' NH4 Adduct', 'cis-', 'trans-']
@@ -40,7 +41,7 @@ def create_reported_df(analyte='All'):
     clean_df = clean_names(full_df, remove_list, spinosad_list)
 
     # Create dataframe from positive reports xlsx
-    pos_df = pd.read_excel('../data/pest_pos.xlsx')
+    pos_df = pd.read_excel(pos_file)
     pos_df['SampleCode2'] = pos_df['SampleCode'].str[:-1]
     pos_df = correct_sp(pos_df, 'Imadacloprid_Result', 'Imidacloprid_Result')
     pos_df = correct_sp(pos_df, 'Spirotretramat_Result',
@@ -80,7 +81,10 @@ def merge(directory, cols):
         dataframe from all txt files filtered to only contain columns
         in the cols list
     '''
-    
+    files = files_from_dir(directory)
+    dfs = files_to_dfs(files)
+    reduced_dfs = reduce_df(dfs, cols)
+    return pd.concat(reduced_dfs)
     
     
     # count = 0
@@ -94,9 +98,11 @@ def merge(directory, cols):
     #     else:
     #         merged_df = merged_df.append(reduced_df)
     #     count += 1
-    return None
+    # return None
 
 def files_from_dir(directory):
+    # TODO: test if looping through each file 3 times is slower than
+        # chaining reduce_df(file_to_df(entry)) in the first loop
     return [entry for entry in os.scandir(directory)
             if entry.name.endswith('.txt') and entry.is_file()]
 
@@ -128,7 +134,7 @@ def files_to_dfs(files):
     return df_list
 
 
-def reduce_df(df, cols):
+def reduce_df(dfs, cols):
     ''' drop unnecessary columns from dataframe, drop samples that do not
     have integrated peaks (RT = 0) and all controls (sample type <> unknown)
     Parameters:
@@ -143,10 +149,14 @@ def reduce_df(df, cols):
     sample_df: DataFrame
         filtered dataframe
     '''
-    df_cols = df[cols]
-    df_rows_dropped = df_cols[df_cols['Analyte Retention Time (min)'] != 0]
-    sample_df = df_rows_dropped[df_rows_dropped['Sample Type'] == 'Unknown']
-    return sample_df
+    df_list = []
+    for df in dfs:
+        df_cols = df[cols]
+        df_rrt = df_cols[df_cols['Relative Retention Time'] != 0]
+        df_rows_dropped = df_rrt[df_rrt['Analyte Retention Time (min)'] != 0]
+        sample_df = df_rows_dropped[df_rows_dropped['Sample Type'] == 'Unknown']
+        df_list.append(sample_df)
+    return df_list
 
 
 def clean_names(df, remove_list, spinosad_list):
@@ -169,7 +179,6 @@ def clean_names(df, remove_list, spinosad_list):
     df['sample_name'] = df['Sample Name'].str.extract(r'(\d{8}-\d{2})')
     df.dropna(subset=['sample_name'], inplace=True)
     df['analyte'] = df['Analyte Peak Name'].str[:-2]
-    df = df[df['Relative Retention Time'] != 0]
     for elem in remove_list:
         df['analyte'] = df['analyte'].str.replace(elem, '')
     for elem in spinosad_list:
@@ -248,7 +257,7 @@ def calculate_cols(df):
 
 if __name__ == '__main__':
 
-    reported_df = create_reported_df('Myclobutanil')
+    reported_df = create_reported_df('All')
 
     print('Count:', reported_df['reported'].count())
     print('Reported:', reported_df['reported'].sum())
@@ -262,4 +271,4 @@ if __name__ == '__main__':
     # NaNs are from #DIV/0 errors in Analyte Slope of Baseline (%/min)
     zero_na_df = numeric_df.fillna(0)
 
-    zero_na_df.to_csv('../data/merged_df_myclo.csv')
+    zero_na_df.to_csv('../data/merged_df_test.csv')
