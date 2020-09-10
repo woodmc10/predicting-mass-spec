@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import os
+import functools
+import time
 
 
 def create_reported_df(analyte='All', path=r'../data',
@@ -66,6 +68,20 @@ def create_reported_df(analyte='All', path=r'../data',
     return reported_full_df
 
 
+
+def timer(func):
+    @functools.wraps(func)
+    def wrapper_timer(*args, **kwargs):
+        tic = time.perf_counter()
+        value = func(*args, **kwargs)
+        toc = time.perf_counter()
+        elapsed_time = toc - tic
+        print(f"Elapsed time: {elapsed_time:0.4f} seconds")
+        return value
+    return wrapper_timer
+
+
+@timer
 def merge(directory, cols):
     '''Merge all csv files in the directory
     Parameters
@@ -101,8 +117,8 @@ def merge(directory, cols):
     # return None
 
 def files_from_dir(directory):
-    # TODO: test if looping through each file 3 times is slower than
-        # chaining reduce_df(file_to_df(entry)) in the first loop
+    # TODO: test if looping through each file 3 times is slower (5.5sec) than
+        # chaining reduce_df(file_to_df(entry)) in the first loop (8.4sec)
     return [entry for entry in os.scandir(directory)
             if entry.name.endswith('.txt') and entry.is_file()]
 

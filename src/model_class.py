@@ -13,6 +13,13 @@ import statsmodels.api as sm
 from scipy.stats import uniform, randint
 import xgboost as xgb
 from xgboost.sklearn import XGBClassifier
+from tensorflow import keras
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout
+from tensorflow.keras.metrics import Recall, SpecificityAtSensitivity
+from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.constraints import max_norm
 
 
 class Model(object):
@@ -61,7 +68,7 @@ class Model(object):
         '''
         scorer = make_scorer(self.metric)
         clf = RandomizedSearchCV(self.model, search_dict, n_iter=100,
-                                 verbose=0, scoring=scorer, n_jobs=-1,
+                                 verbose=1, scoring=scorer, n_jobs=-1,
                                  random_state=32)
         search = clf.fit(X, y)
         return search.best_params_, search.best_score_
@@ -190,6 +197,26 @@ def f1_eval(y_pred, dtrain):
     return 'f1_err', err
 
 
+def create_model(optimizer='adam', neurons1=10, neurons2=5):
+    nn_model = Sequential()
+    nn_model.add(Dense(12, input_dim=29, activation='linear'))
+    nn_model.add(Dense(8, activation='linear'))
+    nn_model.add(Dense(1, activation='sigmoid'))
+    nn_model.compile(loss='binary_crossentropy', optimizer='adam',
+                     metrics=[Recall()])
+    # nn_model.add(Dense(neurons1, input_dim=28, activation='linear',
+    #                    kernel_initializer='he_normal',
+    #                    kernel_constraint=max_norm(4)))
+    # nn_model.add(Dropout(0.5))
+    # nn_model.add(Dense(neurons2, activation='linear',
+    #                    kernel_initializer='he_normal'))
+    # nn_model.add(Dense(1, activation='sigmoid'))
+    # optimizer = Adam(lr=0.0001)
+    # nn_model.compile(loss='binary_crossentropy', optimizer=optimizer,
+                    #  metrics=[SpecificityAtSensitivity(0.75)])
+    return nn_model
+
+
 if __name__ == '__main__':
     all_df = create_data('../data/merged_df.csv', 'All')
 
@@ -242,7 +269,7 @@ if __name__ == '__main__':
     # 'reg_alpha': 0.01, 'objective': 'reg:linear', 'min_child_weight': 5,
     # 'max_depth': 5, 'gamma': 0, 'eta': 0.075, 'colsample_by_tree': 1},
     # F1 Score: 0.7961882282491608)
-    '''
+    
 
     grad_boost = XGBClassifier(learning_rate =0.01,
                                n_estimators=551,
@@ -273,3 +300,31 @@ if __name__ == '__main__':
     print(GB.hyper_search(distributions_gb, X_train, y_train))
     print(cv_results)
     print(cv_results.shape)
+    '''
+
+    # Neural Net
+    # X.shape = (1824, 28)
+    nn_model = KerasClassifier(build_fn=create_model, batch_size=300, epochs=15)
+    distributions_nn = dict(
+        # batch_size=[100, 200, 300, 400, 500],
+        # epochs=[5, 10, 15, 20, 25, 50],
+        optimizer=['SGD', 'RMSprop', 'Adagrad',
+                   'Adadelta', 'Adam', 'Adamax',
+                   'Nadam'],
+        # learn_rate=[0.000001, 0.0001, 0.001, 0.01, 0.1, 0.2, 0.3],
+        # momentum=[0.0, 0.2, 0.4, 0.6, 0.8, 0.9],
+        # init_mode=['uniform', 'lecun_uniform', 'normal',
+        #            'zero', 'glorot_normal',
+        #            'glorot_uniform', 'he_normal',
+        #            'he_uniform'],
+        # activation=['softmax', 'softplus', 'softsign',
+        #             'relu', 'tanh', 'sigmoid',
+        #             'hard_sigmoid', 'linear'],
+        # weight_constraint=[2, 3, 4],
+        # dropout_rate=[0.4, 0.5, 0.6, 0.7],
+        # neurons1=[1, 5, 10, 15, 25, 50],
+        # neurons2=[1, 5, 10, 15, 25, 50]
+    )
+    NN = Model(nn_model, recall_score)
+    print(NN.hyper_search(distributions_nn, X_train, y_train))
+    

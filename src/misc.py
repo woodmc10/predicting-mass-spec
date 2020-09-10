@@ -12,8 +12,10 @@ from sklearn.inspection import plot_partial_dependence
 import statsmodels.api as sm
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from data_class import Data, create_data
-from model_class import Model
+from model_class import Model, create_model
 from xgboost import XGBClassifier
+from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
+from collections import defaultdict
 
 
 def variance_factor(df):
@@ -63,6 +65,7 @@ def compare_models(model_list, metric, X, y, thresh=0.5, save=False):
     metric_result = []
     fig, axes = plt.subplots(1, 2, figsize=(10, 6))
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33,
+                                                        stratify=y,
                                                         random_state=42)
     for model in model_list:
         mod = Model(model[0], metric)
@@ -76,7 +79,7 @@ def compare_models(model_list, metric, X, y, thresh=0.5, save=False):
         print(model[1])
         print(mod.summary(X_test, y_test))
     axes[0].plot([0, 1], [0, 1], color='navy', linestyle='--',
-                 label='Random Chance')
+                 label='No Skill')
     axes[0].set_xlabel('False Positive Rate')
     axes[0].set_ylabel('True Positive Rate')
     axes[0].set_title('ROC Curve')
@@ -85,7 +88,7 @@ def compare_models(model_list, metric, X, y, thresh=0.5, save=False):
     axes[1].set_ylabel('F1 Score')
     axes[1].set_title('Threshold Comparison')
     if save:
-        plt.savefig('../images/roc_f1.png')
+        plt.savefig('../images/roc_f1_test.png')
     else:
         plt.show()
     return metric_result, model_list
@@ -136,7 +139,7 @@ def sort_columns(columns, coefs):
     sort_all_coefs = []
     sort_no_analyte_coefs = []
     for key in sort_d_coefs:
-        print_cols.append(sort_col[key])
+        print_cols.append(sort_col.get(key, key))
         sort_all_coefs.append(d_coefs[key])
         if 'analyte_' in key:
             sort_no_analyte_coefs.append(0)
@@ -196,7 +199,7 @@ def feature_comparison(columns, coefs, features, save=False):
                loc='lower right')
     plt.tight_layout()
     if save:
-        plt.savefig('../images/coef_features.png')
+        plt.savefig('../images/coef_features_test.png')
     else:
         plt.show()
 
@@ -227,8 +230,9 @@ def importance_plot(ax, all_vals, no_analyte, colors):
 
 
 if __name__ == '__main__':
-    all_df = create_data('../data/merged_df.csv', 'All')
-    print(variance_factor(all_df.full_df))
+    all_df = create_data('../data/merged_df_test.csv', 'All')
+    all_df.full_df['random'] = np.random.random(len(all_df.full_df))
+    # print(variance_factor(all_df.full_df))
 
     # compare best models from random search
     X, y = Data.pop_reported(all_df.full_df)
@@ -251,9 +255,11 @@ if __name__ == '__main__':
                                scale_pos_weight=1,
                                reg_alpha=0.2,
                                seed=27)
+    # nn_model = KerasClassifier(build_fn=create_model, batch_size=100, epochs=50)
     mod_list = [(lr, 'Logistic Regression'), (rf, 'Random Forest'),
                 (xgb, 'XGBoost Classifier'), (grad_boost, 'Tuned Boost')]
-    scores, model_list = compare_models(mod_list, f1_score, X, y, save=False)
+                # (nn_model, 'Neural Net')]
+    scores, model_list = compare_models(mod_list, f1_score, X, y, save=True)
     print(scores)
 
     '''
@@ -265,3 +271,11 @@ if __name__ == '__main__':
     columns = all_df.full_df.drop('reported', axis=1).columns
     feature_comparison(columns, coefs, features, save=True)
     '''
+
+    # plot feature importance and coefs
+    boosted_forest = model_list[3][0]
+    random_forest = model_list[1][0]
+    coefs = boosted_forest.feature_importances_
+    features = random_forest.feature_importances_
+    columns = all_df.full_df.drop('reported', axis=1).columns
+    feature_comparison(columns, coefs, features, save=True)
