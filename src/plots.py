@@ -302,6 +302,184 @@ def lasso_plot(data, pairs, save=False):
             plt.show()
 
 
+def sort_columns(columns, coefs):
+    '''Create lists containing column and value information that are
+    sorted in the same order. In one list change the value of all
+    analyte_* columns to 0. Update the column names to shorter names
+    for including in plot labels
+    Parameters
+    ----------
+    columns: list
+        list of feature names, in order passed to model
+    coefs: list
+        list of coefs or feature importances in order returned from model
+    Return
+    ------
+    sort_all_coefs: list
+        coefs values sorted in order of abs(coef)
+    sort_no_analyte_coefs: list
+        coefs values sorted in same order as sort_all_coefs, but any coef
+        from an analyte_ column is set to 0
+    print_col: list
+        list of column names formated for labels in same order as
+        sort_all_coefs
+    '''
+    d_coefs = {columns[i]: coefs[i] for i in range(len(coefs))}
+    sort_d_coefs = sorted(d_coefs, key=lambda k: abs(d_coefs[k]))
+    sort_col = {'Analyte Peak Area (counts)': 'Peak Area',
+                'Analyte Peak Height (cps)': 'Peak Height',
+                'area_ratio': 'Area Ratio',
+                'height_ratio': 'Height Ratio',
+                'Analyte Start Time (min)': 'Start Time',
+                'Anlayte Start Scan': 'Start Scan',
+                'Analyte Stop Time (min)': 'Stop Time',
+                'Analyte Centroid Location (min)': 'Centroid Location',
+                'Analyte Stop Scan': 'Stop Scan',
+                'Analyte Integration Quality': 'Integration Quality',
+                'Analyte Peak Width at 50% Height (min)':
+                'Peak Width 50% Height',
+                'Analyte Peak Width (min)': 'Peak Width',
+                'Analyte Peak Asymmetry': 'Peak Assymetry',
+                'analyte_Azoxystrobin': 'Azoxystrobin',
+                'analyte_Bifenazate': 'Bifenazate',
+                'analyte_Etoxazole': 'Etoxazole',
+                'analyte_Imazalil': 'Imazalil',
+                'analyte_Imidacloprid': 'Imidacloprid',
+                'analyte_Malathion': 'Malathion',
+                'analyte_Myclobutanil': 'Myclobutanil',
+                'analyte_Permethrin': 'Permethrin',
+                'analyte_Spinosad': 'Spinosad',
+                'analyte_Spiromesifen': 'Spiromesifen',
+                'analyte_Spirotetramat': 'Spirotetramat',
+                'analyte_Tebuconazole': 'Tebuconazole',
+                'rt_diff': 'RT Difference',
+                'baseline': 'Baseline Slope'}
+    print_cols = []
+    sort_all_coefs = []
+    sort_no_analyte_coefs = []
+    for key in sort_d_coefs:
+        print_cols.append(sort_col.get(key, key))
+        sort_all_coefs.append(d_coefs[key])
+        if 'analyte_' in key:
+            sort_no_analyte_coefs.append(0)
+        else:
+            sort_no_analyte_coefs.append(d_coefs[key])
+    return sort_all_coefs, sort_no_analyte_coefs, print_cols
+
+
+def feature_comparison(columns, coefs, features, label_values, fig_name='plot.png', save=False):
+    '''plot two bar charts, one for logistic regression coefficients,
+    one for random forest feature importances
+    Parameters
+    ----------
+    columns: list
+        list of column names
+    coefs: list
+        list of coefficients from logistic regression
+    features: list
+        list of feature importances from random forest
+    label_values: list of tuples
+        list of titles for two plots, if logistic regression is included
+        it must be the first of the two plots
+    fig_name:
+        file location for saving plot
+    save: bool
+        if true save plot, if false show plot
+    Return
+    ------
+    None
+    '''
+    # Sort Column names and Feature Importances
+    sort_coefs, sort_no_a_coefs, sort_d_coefs = sort_columns(columns, coefs)
+    sort_feat, sort_no_a_feat, sort_d_feat = sort_columns(columns, features)
+
+    # Formatting for Logistic Regression
+    pos_coefs = [0 if coef < 0 else coef for coef in sort_coefs]
+    pos_no_a_coefs = [0 if coef < 0 else coef for coef in sort_no_a_coefs]
+    colors = ['r' if coef < 0 else 'g' for coef in sort_coefs]
+
+    # Extract figure variables
+    color1 = label_values[0][0]
+    title1 = label_values[0][1]
+    label1 = label_values[0][2]
+    legend_title = None
+    color2 = label_values[1][0]
+    title2 = label_values[1][1]
+    label2 = label_values[1][2]
+
+    # Plots
+    fig, axes = plt.subplots(1, 2, figsize=(12, 6))
+
+    # Left plot
+    if title1 == 'Logistic Regression':
+        colors = colors
+    else:
+        colors = color1
+    importance_plot(axes[0], sort_coefs, sort_no_a_coefs, colors)
+    importance_plot(axes[0], pos_coefs, pos_no_a_coefs, color1)
+    axes[0].set_xlabel(label1, fontsize=14)
+    axes[0].set_yticklabels(sort_d_coefs, fontsize=12)
+    axes[0].set_title(title1, fontsize=16)
+    axes[0].legend()
+    handles, labels = axes[0].get_legend_handles_labels()
+    order1 = [1, 0]
+    
+    # Add label to split out positive and negative coefficients
+    if title1 == 'Logistic Regression':
+        order2 = [3, 2]
+        axes[0].legend([handles[idx] for idx in order2],
+                    [labels[idx] for idx in order2],
+                    loc='lower right', title='Positive Coefficients',
+                    bbox_to_anchor=(1, 0.2))
+        legend_title = 'Negative Coefficients'
+    
+    l1 = axes[0].legend([handles[idx] for idx in order1],
+                        [labels[idx] for idx in order1],
+                        loc='lower right', title=legend_title)
+    axes[0].add_artist(l1)
+
+    # Right plot
+    importance_plot(axes[1], sort_feat, sort_no_a_feat, color2)
+    axes[1].set_xlabel(label2, fontsize=14)
+    axes[1].set_yticks(list(range(len(features))))
+    axes[1].set_yticklabels(sort_d_feat, fontsize=12)
+    axes[1].set_title(title2, fontsize=16)
+    handles, labels = plt.gca().get_legend_handles_labels()
+    order = [1, 0]
+    plt.legend([handles[idx] for idx in order],[labels[idx] for idx in order],
+               loc='lower right')
+    plt.tight_layout()
+    if save:
+        plt.savefig(fig_name)
+    else:
+        plt.show()
+
+
+def importance_plot(ax, all_vals, no_analyte, colors):
+    '''Add a bar plot of feature importance or coefficients to an axes
+    Paramters
+    ---------
+    ax: matplotlib axes
+        axes to add plot
+    all_vals: list
+        list containing all feature importance or coefficients
+    no_analyte: list
+        same list as all_vals but analyte columns have been set to 0
+    colors: list or string
+        list of colors, one for each value, or a single color
+    Return
+    ------
+    ax: matplotlib axes
+        axes with plot
+    '''
+    ax.barh(list(range(len(all_vals))), np.abs(all_vals), color=colors,
+            alpha=0.1, label='Categorical Features')
+    ax.barh(list(range(len(all_vals))), np.abs(no_analyte), color=colors,
+            alpha=0.7, label='Continuous Features')
+    ax.set_yticks(list(range(len(all_vals))))
+    return ax
+
+
 if __name__ == '__main__':
 
     all_df = create_data('../data/merged_df.csv', 'All')

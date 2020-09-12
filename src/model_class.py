@@ -13,13 +13,13 @@ import statsmodels.api as sm
 from scipy.stats import uniform, randint
 import xgboost as xgb
 from xgboost.sklearn import XGBClassifier
-from tensorflow import keras
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout
-from tensorflow.keras.metrics import Recall, SpecificityAtSensitivity
-from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.constraints import max_norm
+# from tensorflow import keras
+# from tensorflow.keras.models import Sequential
+# from tensorflow.keras.layers import Dense, Dropout
+# from tensorflow.keras.metrics import Recall, SpecificityAtSensitivity
+# from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
+# from tensorflow.keras.optimizers import Adam
+# from tensorflow.keras.constraints import max_norm
 
 
 class Model(object):
@@ -141,7 +141,7 @@ class Model(object):
         fpr, tpr, thresholds = roc_curve(y, y_probs)
         return fpr, tpr
 
-    def roc_plot(self, X, y, ax, label):
+    def roc_plot(self, X, y, ax, color, label):
         '''Plot fpr vs tpr
         Parameters
         ----------
@@ -151,6 +151,8 @@ class Model(object):
             array of tagets
         ax: matplotlib axes
             axes for plotting curve
+        color: str
+            color for curve
         label: string
             text label for curve
 
@@ -160,10 +162,10 @@ class Model(object):
             axes with plotted roc curve
         '''
         fpr, tpr = self.roc(X, y)
-        ax.plot(fpr, tpr, label=label)
+        ax.plot(fpr, tpr, color=color, label=label)
         return ax
 
-    def thresh_plot(self, X, y, ax, label):
+    def thresh_plot(self, X, y, ax, color, label):
         '''Plot threshold vs score of class metric
         Parameters
         ----------
@@ -173,6 +175,8 @@ class Model(object):
             array of tagets
         ax: matplotlib axes
             axes for plotting curve
+        color: str
+            color for curve
         label: string
             text label for curve
 
@@ -186,7 +190,7 @@ class Model(object):
         y_probs = self.predict_proba(X)[:, 1]
         thresholds = np.linspace(0, 1, 51)
         metrics = [self.score_metric(X, y, thresh) for thresh in thresholds]
-        ax.plot(thresholds, metrics, label=label)
+        ax.plot(thresholds, metrics, color=color, label=label)
         self.best_thresh = thresholds[np.argmax(metrics)]
         return ax, self.best_thresh
 

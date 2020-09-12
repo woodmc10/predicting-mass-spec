@@ -13,8 +13,9 @@ import statsmodels.api as sm
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from data_class import Data, create_data
 from model_class import Model, create_model
+from plots import feature_comparison
 from xgboost import XGBClassifier
-from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
+# from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
 from collections import defaultdict
 
 
@@ -38,7 +39,8 @@ def variance_factor(df):
     return sorted_vif
 
 
-def compare_models(model_list, metric, X, y, thresh=0.5, save=False):
+def compare_models(model_list, metric, X, y, thresh=0.5, fig_name='plot.png',
+                   save=False):
     '''Generate ROC curves, threshold plots, and print out metric scores
     Parameters
     ----------
@@ -52,16 +54,20 @@ def compare_models(model_list, metric, X, y, thresh=0.5, save=False):
         array of targets
     thresh: float
         defalut threshold for initial model evaluation
-    plot: bool
-        plot roc curve, threshold plot and determine best threhold for
-        given metric if true
+    fig_name: str
+        file name for saving figure
+    save: bool
+        if true, save the plot
     Return
     ------
     metric_result: list
         list of tuples (model name, metric score)
-    model_list
+    model_list: list
         original list of models
+    mod_class_list:
+        list of model class created from param model_list
     '''
+    mod_class_list = []
     metric_result = []
     fig, axes = plt.subplots(1, 2, figsize=(10, 6))
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33,
@@ -70,14 +76,15 @@ def compare_models(model_list, metric, X, y, thresh=0.5, save=False):
     for model in model_list:
         mod = Model(model[0], metric)
         mod.fit(X_train, y_train)
-        axes[0] = mod.roc_plot(X_test, y_test, axes[0], model[1])
+        axes[0] = mod.roc_plot(X_test, y_test, axes[0], model[2], model[1])
         axes[1], thresh = mod.thresh_plot(X_test, y_test,
-                                            axes[1], model[1])
+                                            axes[1], model[2], model[1])
         result = mod.score_metric(X_test, y_test, thresh)
         metric_result.append((model[1], result.round(2)))
 
         print(model[1])
         print(mod.summary(X_test, y_test))
+        mod_class_list.append(mod)
     axes[0].plot([0, 1], [0, 1], color='navy', linestyle='--',
                  label='No Skill')
     axes[0].set_xlabel('False Positive Rate')
@@ -88,150 +95,15 @@ def compare_models(model_list, metric, X, y, thresh=0.5, save=False):
     axes[1].set_ylabel('F1 Score')
     axes[1].set_title('Threshold Comparison')
     if save:
-        plt.savefig('../images/roc_f1_test.png')
+        plt.savefig(fig_name)
     else:
         plt.show()
-    return metric_result, model_list
-
-
-def sort_columns(columns, coefs):
-    '''Create lists containing column and value information that are
-    sorted in the same order. In one list change the value of all
-    analyte_* columns to 0. Update the column names to shorter names
-    for including in plot labels
-    Parameters
-    ----------
-    columns: list
-        list of feature names, in order passed to model
-    coefs: list
-        list of coefs or feature importances in order returned from model
-    Return
-    ------
-    sort_all_coefs: list
-        coefs values sorted in order of abs(coef)
-    sort_no_analyte_coefs: list
-        coefs values sorted in same order as sort_all_coefs, but any coef
-        from an analyte_ column is set to 0
-    print_col: list
-        list of column names formated for labels in same order as
-        sort_all_coefs
-    '''
-    d_coefs = {columns[i]: coefs[i] for i in range(len(coefs))}
-    sort_d_coefs = sorted(d_coefs, key=lambda k: abs(d_coefs[k]))
-    sort_col = {'Analyte Peak Area (counts)': 'Peak Area',
-                'Analyte Peak Width (min)': 'Peak Width',
-                'Analyte Peak Asymmetry': 'Peak Assymetry',
-                'analyte_Azoxystrobin': 'Azoxystrobin',
-                'analyte_Bifenazate': 'Bifenazate',
-                'analyte_Etoxazole': 'Etoxazole',
-                'analyte_Imazalil': 'Imazalil',
-                'analyte_Imidacloprid': 'Imidacloprid',
-                'analyte_Malathion': 'Malathion',
-                'analyte_Myclobutanil': 'Myclobutanil',
-                'analyte_Permethrin': 'Permethrin',
-                'analyte_Spinosad': 'Spinosad',
-                'analyte_Spiromesifen': 'Spiromesifen',
-                'analyte_Spirotetramat': 'Spirotetramat',
-                'analyte_Tebuconazole': 'Tebuconazole',
-                'rt_diff': 'RT Difference',
-                'baseline': 'Baseline Slope'}
-    print_cols = []
-    sort_all_coefs = []
-    sort_no_analyte_coefs = []
-    for key in sort_d_coefs:
-        print_cols.append(sort_col.get(key, key))
-        sort_all_coefs.append(d_coefs[key])
-        if 'analyte_' in key:
-            sort_no_analyte_coefs.append(0)
-        else:
-            sort_no_analyte_coefs.append(d_coefs[key])
-    return sort_all_coefs, sort_no_analyte_coefs, print_cols
-
-
-def feature_comparison(columns, coefs, features, save=False):
-    '''plot two bar charts, one for logistic regression coefficients,
-    one for random forest feature importances
-    Parameters
-    ----------
-    columns: list
-        list of column names
-    coefs: list
-        list of coefficients from logistic regression
-    features: list
-        list of feature importances from random forest
-    save: bool
-        if true save plot, if false show plot
-    Return
-    ------
-    None
-    '''
-    sort_coefs, sort_no_a_coefs, sort_d_coefs = sort_columns(columns, coefs)
-    sort_feat, sort_no_a_feat, sort_d_feat = sort_columns(columns, features)
-    pos_coefs = [0 if coef < 0 else coef for coef in sort_coefs]
-    pos_no_a_coefs = [0 if coef < 0 else coef for coef in sort_no_a_coefs]
-    colors = ['r' if coef < 0 else 'g' for coef in sort_coefs]
-    fig, axes = plt.subplots(1, 2, figsize=(12, 6))
-    importance_plot(axes[0], sort_coefs, sort_no_a_coefs, colors)
-    importance_plot(axes[0], pos_coefs, pos_no_a_coefs, 'green')
-    axes[0].set_xlabel('Coefficient Value', fontsize=14)
-    axes[0].set_yticklabels(sort_d_coefs, fontsize=12)
-    axes[0].set_title('Logistic Regression', fontsize=16)
-    axes[0].legend()
-    handles, labels = axes[0].get_legend_handles_labels()
-    order1 = [1, 0]
-    l1 = axes[0].legend([handles[idx] for idx in order1],
-                        [labels[idx] for idx in order1],
-                        loc='lower right', title='Negative Coefficients')
-    order2 = [3, 2]
-    axes[0].legend([handles[idx] for idx in order2],
-                   [labels[idx] for idx in order2],
-                   loc='lower right', title='Positive Coefficients',
-                   bbox_to_anchor=(1, 0.2))
-    axes[0].add_artist(l1)
-    importance_plot(axes[1], sort_feat, sort_no_a_feat, 'orange')
-    axes[1].set_xlabel('Feature Importance', fontsize=14)
-    axes[1].set_yticks(list(range(len(features))))
-    axes[1].set_yticklabels(sort_d_feat, fontsize=12)
-    axes[1].set_title('Random Forest', fontsize=16)
-    handles, labels = plt.gca().get_legend_handles_labels()
-    order = [1, 0]
-    plt.legend([handles[idx] for idx in order],[labels[idx] for idx in order],
-               loc='lower right')
-    plt.tight_layout()
-    if save:
-        plt.savefig('../images/coef_features_test.png')
-    else:
-        plt.show()
-
-
-def importance_plot(ax, all_vals, no_analyte, colors):
-    '''Add a bar plot of feature importance or coefficients to an axes
-    Paramters
-    ---------
-    ax: matplotlib axes
-        axes to add plot
-    all_vals: list
-        list containing all feature importance or coefficients
-    no_analyte: list
-        same list as all_vals but analyte columns have been set to 0
-    colors: list or string
-        list of colors, one for each value, or a single color
-    Return
-    ------
-    ax: matplotlib axes
-        axes with plot
-    '''
-    ax.barh(list(range(len(all_vals))), np.abs(all_vals), color=colors,
-            alpha=0.1, label='Categorical Features')
-    ax.barh(list(range(len(all_vals))), np.abs(no_analyte), color=colors,
-            alpha=0.7, label='Continuous Features')
-    ax.set_yticks(list(range(len(all_vals))))
-    return ax
+    return metric_result, model_list, mod_class_list
 
 
 if __name__ == '__main__':
     all_df = create_data('../data/merged_df_test.csv', 'All')
-    all_df.full_df['random'] = np.random.random(len(all_df.full_df))
+    # all_df.full_df['random'] = np.random.random(len(all_df.full_df))
     # print(variance_factor(all_df.full_df))
 
     # compare best models from random search
@@ -256,10 +128,15 @@ if __name__ == '__main__':
                                reg_alpha=0.2,
                                seed=27)
     # nn_model = KerasClassifier(build_fn=create_model, batch_size=100, epochs=50)
-    mod_list = [(lr, 'Logistic Regression'), (rf, 'Random Forest'),
-                (xgb, 'XGBoost Classifier'), (grad_boost, 'Tuned Boost')]
+    mod_list = [(lr, 'Logistic Regression', 'blue'),
+                (rf, 'Random Forest', 'orange'),
+                (xgb, 'XGBoost Classifier', 'purple'),
+                (grad_boost, 'XG Boost', 'purple')]
                 # (nn_model, 'Neural Net')]
-    scores, model_list = compare_models(mod_list, f1_score, X, y, save=True)
+    scores, model_list, mod_class_list = compare_models(
+        mod_list[:-4:-2], f1_score, X, y,
+        fig_name='../images/boost_rand_comp.png', save=False
+    )
     print(scores)
 
     '''
@@ -273,9 +150,51 @@ if __name__ == '__main__':
     '''
 
     # plot feature importance and coefs
-    boosted_forest = model_list[3][0]
+    # log_reg = model_list[0][0]
+    # log_tup = ('green', 'Logistic Regression', 'Coefficient Value')
+    # coefs = log_reg.coef_[0]
+    boosted_forest = model_list[0][0]
+    boost_tup = ('purple', 'XG Boost', 'Feature Importance')
+    features1 = boosted_forest.feature_importances_
     random_forest = model_list[1][0]
-    coefs = boosted_forest.feature_importances_
-    features = random_forest.feature_importances_
+    rand_tup = ('orange', 'Random Forest', 'Feature Importance')
+    features2 = random_forest.feature_importances_
     columns = all_df.full_df.drop('reported', axis=1).columns
-    feature_comparison(columns, coefs, features, save=True)
+    labels = [boost_tup, rand_tup]
+    feature_comparison(columns, features1, features2, labels,
+                       fig_name='../images/boost_rand_features.png',
+                       save=False)
+
+    # Evaluate XGBoost model
+    mod_boost = mod_class_list[0]
+    thresh = mod_boost.best_thresh
+    y_prob = mod_boost.predict_proba(X_test)[:, 1]
+    y_pred = (y_prob >= thresh).astype(int)
+    num_tests = len(y_test)
+    fp = 0
+    fn = 0
+    tp = 0
+    tn = 0
+    for index, pred in enumerate(y_pred):
+        if pred == 1:
+            if y_test[index] == 1:
+                tp +=1
+            else:
+                fp += 1
+        else:
+            if y_test[index] == 0:
+                tn += 1
+            else:
+                fn += 1
+    num_correct_tests = tp + tn
+    print(tp, fp, fn, tn)
+    plt.bar([1,2], [fp, 0], color=['r', 'g'], alpha=0.5,
+            label='Not Reported')
+    plt.bar([1,2], [0, fn], color=['g', 'g'], alpha=0.5,
+            label='Reported')
+    plt.xlabel('Predicted Results')
+    plt.ylabel('Incorrect Classifications')
+    plt.xticks([1, 2], ['Reported', 'Not Reported'])
+    plt.legend(title='Actual Result')
+    plt.title('Less Confusion')
+    plt.show()

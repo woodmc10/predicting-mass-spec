@@ -66,6 +66,8 @@ Figure 4: Scatter plots of pairs of features that were expected to be collinear
 ### Feature Selection
 Instead of arbitrarily picking one of the features, a lasso regression was run with varying learning rates and the weights of the coefficients were plotted. Using this plot I selected the feature in each collinear pair that had a lower weight on the model, or was set to a weight zero at a lower learning rate. 
 
+![lasso_gif](images/lasso.gif)
+
 ![lasso](images/lasso.png)
 Figure 5: Lasso Regularization
 
@@ -82,21 +84,41 @@ Based on the lasso regularization plot Analyte Centroid Location, Analyte Peak H
 Table 3: Variance Inflation Factor for features
 
 # Models
-## Model Comparison
+## Logistic Regression and Random Forest
+### Comparison
 In order to understand the importance of the features for each of the models, Logistic Regression and Random Forest were chosen. A randomized search was performed to determine the best hyperparameters for fitting each model. The hyperparameters were very similar whether the five non-collinear features or all the features were used for training the data. A Receiver Operating Characterstic (ROC) plot and plot of F1 score vs threshold were used to compare the performance of the logistic regression to the random forest. The ROC plot shows the false positive rate vs the true positive rate for different thresholds. This indicates the ability of the model to correctly predict positives at different thresholds and can indicate the overall performance of the model based on the area under the curve.
 
-When datasets include unbalanced classes the accuracy metric can become useless, for example in this scenario the model could acheive 87% accuracy by assigning every point to the negative class, because the dataset is 87% negative. In these cases precision, recall or the F1 score are better metrics to evaluate model performance. These models were evaluated using the F! score because this metric is penalized by both false positives and false negatives. Since the goal of this prediction is to reduce the time spent by chemists reviewing data, false positives would result in unnecessary review time and be counter to that goal. However, false negatives could result in an unreported pesticide present in food, which could be detrimental to public health. Therefore it is important to pick the F1 score as the metric for model performance to reduce both of these cases. The best F1 score for the logistic regression and random forest were 0.61 and 0.76 respectively.
+When datasets include unbalanced classes the accuracy metric can become useless, for example in this scenario the model could acheive 87% accuracy by assigning every point to the negative class, because the dataset is 87% negative. In these cases precision, recall or the F1 score are better metrics to evaluate model performance. These models were evaluated using the F1 score because this metric is penalized by both false positives and false negatives. Since the goal of this prediction is to reduce the time spent by chemists reviewing data, false positives would result in unnecessary review time and be counter to that goal. However, false negatives could result in an unreported pesticide present in food, which could be detrimental to public health. Therefore it is important to pick the F1 score as the metric for model performance to reduce both of these cases. The best F1 score for the logistic regression and random forest were 0.61 and 0.76 respectively.
 
 ![roc_f1](images/roc_f1.png)
 Figure 6: ROC curve and F1 score comparison over various thresholds for logistic regression and random forest classifier
 
-## Model Interpretation
+### Interpretation
  The coefficients and the feature importances of the models were compared to see if the models were assigning similar weight to the features. The area of the peak was the most important feature for both models, but the logistic regression put much more weight on the different analytes than the random forest did. The random forest put almost no weight on any of the analyte features. This could be due to the nature of random forest feature importance calculation having an impact from the number of times a feature is used for a split. Since all of the analyte features are one hot encoded categorical features the random forest can split on these features a maximum of one time making them less important than the other continuous features. 
 
 ![importance](images/coef_features.png)
 Figure 7: Coefficient Values and Feature Importances
 
 The coefficients assigned by the logistic regression follow the importance a chemist would put on these features. The peak area is used to calculate the concentration and all of the pesticide have concentration thresholds, where samples are not reported if they do not exceed the threshold. The peak width is part of the calculation for peak area, and thus reltaed to concentration. The difference between the observed retention time and the expected retention time is the highest negative coefficient. This also makes sense because the further the peak is from the expected retention time the less likely it is to be the compound of interest and more likely to be an interference that would not be reported. Peak assymetry and baseline slope are both features that describe the appearance of the peak. These features are likely to increase with noisy peak integration that would be less likely to be reported.
+
+## Random Forest and XGBoost
+### Comparison
+The F1 score of the logistic regression and random forest models with the features reduced to remove collinearity were less than ideal. In order to determine the best performance possible all the features were used to train a Random Forest and an XGBoost model. The XGBoost is an extreme gradient boosted algorithm that improves the performance of gradient boosted forests. The XGBoost model out performed the Random Forest, but just barely. When all features are included the XGBoost had an F1 score of 0.86 and the Random Forest had a score of 0.85.
+
+![boost_forest_comp]('../images/boost_forest_comp.png')
+Figure 8: ROC curve and F1 score comparison over various thresholds for XGBoost Classifier and Random Forest Classifier 
+
+### Interpretation
+The XGBoost model put much more relative importance to the categorical features than the Random Forest model. The categorical features are the one hot encoded analyte names. For the XGBoost model it was the most useful to know if the chromatogram was for Myclobutanil. After that the peak height, area and width features were the most important. This was consistent with both the Random Forest and XGBoost models. These features are the ones used to determine the concentration of the analyte in the sample, so it is good to see that the models are using them for determining if the chromatogram should be reported. 
+
+![boost_forset_feat_import]('../boost_rand_features.png')
+Figure 9: Feature Importances for XGBoost Classifier and Random Forest Classifier
+
+## Best Model Evalutaion
+- Bar Chart confustion matrix
+- Profit curve
+- Learning Curve
+- Images of incorrectly classified chromatograms
 
 # Conclusion
 Both the logistic regression and random forest models are finding signal to classify the chromatograms. The peak area is the most important feature for both models. Many of the chromatograms with integrated peaks are finding the analyte of interest, but the concentration in the unreported samples is below the reporting limit. Since the area is directly related to the concentration it is not surprising that these models are putting a large weight on that feature. 
