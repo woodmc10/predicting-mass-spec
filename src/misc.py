@@ -13,7 +13,7 @@ import statsmodels.api as sm
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from data_class import Data, create_data
 from model_class import Model, create_model
-from plots import feature_comparison
+from plots import feature_comparison, plot_learning_curve
 from xgboost import XGBClassifier
 # from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
 from collections import defaultdict
@@ -166,28 +166,7 @@ if __name__ == '__main__':
                        save=False)
 
     # Evaluate XGBoost model
-    mod_boost = mod_class_list[0]
-    thresh = mod_boost.best_thresh
-    y_prob = mod_boost.predict_proba(X_test)[:, 1]
-    y_pred = (y_prob >= thresh).astype(int)
-    num_tests = len(y_test)
-    fp = 0
-    fn = 0
-    tp = 0
-    tn = 0
-    for index, pred in enumerate(y_pred):
-        if pred == 1:
-            if y_test[index] == 1:
-                tp +=1
-            else:
-                fp += 1
-        else:
-            if y_test[index] == 0:
-                tn += 1
-            else:
-                fn += 1
-    num_correct_tests = tp + tn
-    print(tp, fp, fn, tn)
+    tp, fp, fn, tn = mod_class_list[0].confusion_matrix(X_test, y_test)
     plt.bar([1,2], [fp, 0], color=['r', 'g'], alpha=0.5,
             label='Not Reported')
     plt.bar([1,2], [0, fn], color=['g', 'g'], alpha=0.5,
@@ -197,4 +176,6 @@ if __name__ == '__main__':
     plt.xticks([1, 2], ['Reported', 'Not Reported'])
     plt.legend(title='Actual Result')
     plt.title('Less Confusion')
+
+    plot_learning_curve(boosted_forest, 'Learning Curve', X, y)
     plt.show()

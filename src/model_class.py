@@ -194,6 +194,42 @@ class Model(object):
         self.best_thresh = thresholds[np.argmax(metrics)]
         return ax, self.best_thresh
 
+    def confusion_matrix(self, X, y):
+        '''Calculate fp, fn, tp, tn for a given dataset
+        Params
+        ------
+        X: numpy array
+            array of features
+        y: numpy array
+            array of tagets
+        Return:
+        -------
+        fp, fn, tp, tn: int
+            results evaluated at the best threshold if present
+        '''
+        if self.best_thresh is None:
+            thresh = 0.5
+        else:
+            thresh = self.best_thresh
+        y_prob = self.predict_proba(X)[:, 1]
+        y_pred = (y_prob >= thresh).astype(int)
+        fp = 0
+        fn = 0
+        tp = 0
+        tn = 0
+        for index, pred in enumerate(y_pred):
+            if pred == 1:
+                if y[index] == 1:
+                    tp +=1
+                else:
+                    fp += 1
+            else:
+                if y[index] == 0:
+                    tn += 1
+                else:
+                    fn += 1
+        return tp, fp, fn, tn
+
 
 def f1_eval(y_pred, dtrain):
     y_true = dtrain.get_label()
