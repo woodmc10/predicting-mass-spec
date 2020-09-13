@@ -1,5 +1,8 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
+from imblearn.over_sampling import RandomOverSampler, SMOTE
+from imblearn.under_sampling import RandomUnderSampler
+
 
 
 class Data(object):
@@ -49,6 +52,8 @@ class Data(object):
         ----------
         train_size: float
             percent of dataframe for testing data
+        filter_type: str ('limited', 'no_analyte', 'limited_no_analyte')
+            description of how to filter data
         '''
         df = self.filter_cols(filter_type)
         X, y = self.pop_reported(df)
@@ -59,6 +64,60 @@ class Data(object):
                                 left_index=True, right_index=True)
         self.train_df = pd.merge(X_train, y_train, how='left',
                                  left_index=True, right_index=True)
+    
+    def over_sampling(self, df):
+        '''Over sample the positive class 
+        Parameters
+        ----------
+        df: pandas DataFrame
+            dataframe of samples for over sampling
+        Return
+        ------
+        X_ros: 
+            random over sampling of the features
+        y_ros:
+            random over sampling of the targets
+        '''
+        ros = RandomOverSampler()
+        X, y = self.pop_reported(df)
+        X_ros, y_ros = ros.fit_sample(X, y)
+        return X_ros, y_ros
+
+    def under_sampling(self, df):
+        '''Under sample the positive class 
+        Parameters
+        ----------
+        df: pandas DataFrame
+            dataframe of samples for over sampling
+        Return
+        ------
+        X_rus: 
+            random under sampling of the features
+        y_rus:
+            random under sampling of the targets
+        '''
+        rus = RandomUnderSampler()
+        X, y = self.pop_reported(df)
+        X_rus, y_rus = rus.fit_sample(X, y)
+        return X_rus, y_rus
+
+    def smote_sampling(self, df):
+        '''SMOTE over sample the positive class 
+        Parameters
+        ----------
+        df: pandas DataFrame
+            dataframe of samples for over sampling
+        Return
+        ------
+        X_smote: 
+            SMOTE over sampling of the features
+        y_smote:
+            SMOTE over sampling of the targets
+        '''
+        smote = SMOTE()
+        X, y = self.pop_reported(df)
+        X_smote, y_smote = smote.fit_sample(X, y)
+        return X_smote, y_smote
 
     @staticmethod
     def pop_reported(df):

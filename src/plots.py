@@ -8,7 +8,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split, learning_curve
 from sklearn.linear_model import Lasso
-from sklearn.metrics import recall_score, f1_score, make_scorer
+from sklearn.metrics import recall_score, f1_score, make_scorer, accuracy_score
 from data_class import Data, create_data
 from model_class import Model
 
@@ -367,7 +367,8 @@ def sort_columns(columns, coefs):
     return sort_all_coefs, sort_no_analyte_coefs, print_cols
 
 
-def feature_comparison(columns, coefs, features, label_values, fig_name='plot.png', save=False):
+def feature_comparison(columns, coefs, features, label_values,
+                       fig_name='plot.png', save=False):
     '''plot two bar charts, one for logistic regression coefficients,
     one for random forest feature importances
     Parameters
@@ -549,7 +550,7 @@ def plot_learning_curve(estimator, title, X, y, axes=None, ylim=None, cv=None,
     axes.set_xlabel("Training examples")
     axes.set_ylabel("Score")
 
-    scorer = make_scorer(f1_score)
+    scorer = make_scorer(accuracy_score)
     train_sizes, train_scores, test_scores = \
         learning_curve(estimator, X, y, cv=cv, n_jobs=n_jobs,
                        train_sizes=train_sizes, scoring=scorer,
@@ -574,6 +575,65 @@ def plot_learning_curve(estimator, title, X, y, axes=None, ylim=None, cv=None,
     axes.legend(loc="best")
 
 
+def incorrect_plot(fp, fn, fig_name='plot.png', save=False):
+    '''Plot the false positive and false negatives
+    Parameters
+    ----------
+    fp: int
+        number of false positive classifications
+    fn: int
+        number of false negative classifications
+    fig_name: str
+        file location to save plot
+    save: bool
+        if true save the plot, if false show the plot
+    '''
+    plt.bar([1,2], [fp, 0], color=['r', 'g'], alpha=0.5,
+            label='Not Reported')
+    plt.bar([1,2], [0, fn], color=['g', 'g'], alpha=0.5,
+            label='Reported')
+    plt.xlabel('Predicted Results')
+    plt.ylabel('Incorrect Classifications')
+    plt.xticks([1, 2], ['Reported', 'Not Reported'])
+    plt.legend(title='Actual Result')
+    plt.title('Less Confusion')
+    if save:
+        plt.savefig(fig_name)
+    else:
+        plt.show()
+
+
+def profit_curve(model, X_test, y_test, cost_matrix,
+                 fig_name='plot.png', save=False):
+    ''' Plot a profit curve based
+    Parameters
+    ----------
+    model: Model class
+        model to generate predictions
+    cost_matrix: 
+        cost benefit matrix 
+        order: fp, tp, fn, tn
+    fig_name: str
+        file name for saving plot
+    save: bool
+        if true save plot, if false show plot
+    '''
+    fpr, tpr, thresh = model.roc(X_test, y_test)
+    thresh[0] = 1
+    tnr = 1 - fpr
+    fnr = 1 - tpr
+    fpc, tpc, fnc, tnc = cost_matrix
+    cost_arr = fpr * fpc + tpr * tpc + fnr * fnc + tnr * tnc
+    plt.plot(thresh, cost_arr)
+    plt.title('Profit Curve')
+    plt.xlabel('Threshold')
+    plt.ylabel('Profit')
+    if save:
+        plt.savefig(fig_name)
+    else:
+        plt.show()
+
+
 if __name__ == '__main__':
 
     all_df = create_data('../data/merged_df.csv', 'All')
@@ -589,5 +649,5 @@ if __name__ == '__main__':
 
     # lasso_plot(all_df, pairs)
 
-    var_corr = all_df.limited_no_analyte_df.corr()
+    var_corr = all_df.full_df.corr()
     sns.heatmap(var_corr)

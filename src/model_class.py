@@ -139,7 +139,7 @@ class Model(object):
         '''
         y_probs = self.predict_proba(X)[:, 1]
         fpr, tpr, thresholds = roc_curve(y, y_probs)
-        return fpr, tpr
+        return fpr, tpr, thresholds
 
     def roc_plot(self, X, y, ax, color, label):
         '''Plot fpr vs tpr
@@ -161,7 +161,7 @@ class Model(object):
         ax: matplotlib axes
             axes with plotted roc curve
         '''
-        fpr, tpr = self.roc(X, y)
+        fpr, tpr, _ = self.roc(X, y)
         ax.plot(fpr, tpr, color=color, label=label)
         return ax
 
@@ -187,7 +187,6 @@ class Model(object):
         best_thresh: float
             threshold that optimizes the model's metric
         '''
-        y_probs = self.predict_proba(X)[:, 1]
         thresholds = np.linspace(0, 1, 51)
         metrics = [self.score_metric(X, y, thresh) for thresh in thresholds]
         ax.plot(thresholds, metrics, color=color, label=label)
@@ -232,6 +231,7 @@ class Model(object):
 
 
 def f1_eval(y_pred, dtrain):
+    # Calculate f1_score for neural net tuning
     y_true = dtrain.get_label()
     err = 1-f1_score(y_true, np.round(y_pred))
     return 'f1_err', err

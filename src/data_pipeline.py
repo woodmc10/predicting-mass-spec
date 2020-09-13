@@ -100,25 +100,21 @@ def merge(directory, cols):
     files = files_from_dir(directory)
     dfs = files_to_dfs(files)
     reduced_dfs = reduce_df(dfs, cols)
-    return pd.concat(reduced_dfs)
-    
-    
-    # count = 0
-    # for entry in os.scandir(directory):
-    #     # breakpoint()
-    #     if entry.path.endswith(".txt") and entry.is_file():
-    #         df = import_single(entry)
-    #         reduced_df = reduce_df(df, cols)
-    #     if count == 0:
-    #         merged_df = reduced_df
-    #     else:
-    #         merged_df = merged_df.append(reduced_df)
-    #     count += 1
-    # return None
+    merged_df = pd.concat(reduced_dfs)
+    return merged_df
+
 
 def files_from_dir(directory):
-    # TODO: test if looping through each file 3 times is slower (5.5sec) than
-        # chaining reduce_df(file_to_df(entry)) in the first loop (8.4sec)
+    '''Loop through all files in a directory and create a list of
+    .txt files
+    Parameter
+    ---------
+    directory: re string
+        folder containing .txt files
+    Return
+    ------
+    list of .txt files in directory
+    '''
     return [entry for entry in os.scandir(directory)
             if entry.name.endswith('.txt') and entry.is_file()]
 

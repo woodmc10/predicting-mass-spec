@@ -13,7 +13,8 @@ import statsmodels.api as sm
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from data_class import Data, create_data
 from model_class import Model, create_model
-from plots import feature_comparison, plot_learning_curve
+from plots import (feature_comparison, plot_learning_curve, incorrect_plot,
+                   profit_curve)
 from xgboost import XGBClassifier
 # from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
 from collections import defaultdict
@@ -101,16 +102,57 @@ def compare_models(model_list, metric, X_train, X_test, y_train, y_test,
     return metric_result, model_list, mod_class_list
 
 
+def incorrect_classifications(X_test, y_test, model,
+                              sample_file='../data/chrom_info.csv'):
+    '''Create a list of incorrectly classified chromatograms
+    Parameters
+    ----------
+    X_test: pandas DataFrame
+        test dataframe of features
+    y_test: pandas DataFrame
+        test dataframe of targets
+    model: Model class
+        model from the model class to use for classifications
+    sample_file: str
+        location of the file with sample and analyte values
+    Return
+    ------
+    fp_df: pandas DataFrame
+        dataframe of sample and analyte name for false positives
+    fn_df: pandas DataFrame
+        dataframe of sample and analyte name for false negatives
+    '''
+    y_test_df = pd.DataFrame(y_test)
+    y_test_df['probas'] = model.predict_proba(X_test)[:, 1]
+    new_df = pd.merge(X_test, y_test_df, how='left', left_index=True,
+                      right_index=True)
+    new_df['preds'] = np.where(new_df['probas']
+                               < model.best_thresh, 0, 1)
+    new_df['fp'] = np.where(
+        new_df['preds'] == 1, np.where(new_df['reported'] == 0, 1, 0), 0
+    )
+    new_df['fn'] = np.where(
+        new_df['preds'] == 0, np.where(new_df['reported'] == 1, 1, 0), 0
+    )
+    sample_df = pd.read_csv(sample_file, index_col='Unnamed: 0')
+    fp_index = list(new_df[new_df['fp'] == 1].index.values)
+    fp_df = sample_df[sample_df.index.isin(fp_index)]
+    fn_index = list(new_df[new_df['fn'] == 1].index.values)
+    fn_df = sample_df[sample_df.index.isin(fn_index)]
+    return fp_df, fn_df
+
 if __name__ == '__main__':
     all_df = create_data('../data/merged_df_test.csv', 'All')
     # all_df.full_df['random'] = np.random.random(len(all_df.full_df))
     # print(variance_factor(all_df.full_df))
 
-    # compare best models from random search
+    # Create train/test sets
     X, y = Data.pop_reported(all_df.full_df)
     all_df.train_test_split(test_size=0.33)
     X_train, y_train = all_df.pop_reported(all_df.train_df)
     X_test, y_test = all_df.pop_reported(all_df.test_df)
+
+    # Create models from best hyperparameter searches
     lr = LogisticRegression(penalty='none', class_weight='balanced',
                             solver='saga', max_iter=100000)
     rf = RandomForestClassifier(class_weight='balanced_subsample')
@@ -128,6 +170,8 @@ if __name__ == '__main__':
                                reg_alpha=0.2,
                                seed=27)
     # nn_model = KerasClassifier(build_fn=create_model, batch_size=100, epochs=50)
+    
+    # Compare best models
     mod_list = [(lr, 'Logistic Regression', 'blue'),
                 (rf, 'Random Forest', 'orange'),
                 (xgb, 'XGBoost Classifier', 'purple'),
@@ -138,16 +182,6 @@ if __name__ == '__main__':
         fig_name='../images/boost_rand_comp.png', save=False
     )
     print(scores)
-
-    '''
-    # plot feature importance and coefs
-    log_complex = model_list[0][0]
-    random_forest = model_list[1][0]
-    coefs = log_complex.coef_[0]
-    features = random_forest.feature_importances_
-    columns = all_df.full_df.drop('reported', axis=1).columns
-    feature_comparison(columns, coefs, features, save=True)
-    '''
 
     # plot feature importance and coefs
     # log_reg = model_list[0][0]
@@ -167,34 +201,42 @@ if __name__ == '__main__':
 
     # Evaluate XGBoost model
     # Confusion Matrix (Bar Chart)
-    tp, fp, fn, tn = mod_class_list[0].confusion_matrix(X_test, y_test.values)
-    plt.bar([1,2], [fp, 0], color=['r', 'g'], alpha=0.5,
-            label='Not Reported')
-    plt.bar([1,2], [0, fn], color=['g', 'g'], alpha=0.5,
-            label='Reported')
-    plt.xlabel('Predicted Results')
-    plt.ylabel('Incorrect Classifications')
-    plt.xticks([1, 2], ['Reported', 'Not Reported'])
-    plt.legend(title='Actual Result')
-    plt.title('Less Confusion')
+    mod_boost = mod_class_list[0]
+    tp, fp, fn, tn = mod_boost.confusion_matrix(X_test, y_test.values)
+    incorrect_plot(fp, fn, save=False)
+    print(tp, fp, fn, tn)
 
     # Learning Curve
     # plot_learning_curve(boosted_forest, 'Learning Curve', X, y)
-    plt.show()
+    # plt.show()
 
     # List of incorrectly classified chromatograms
-    y_test_df = pd.DataFrame(y_test)
-    y_test_df['probas'] = mod_class_list[0].predict_proba(X_test)[:, 1]
-    new_df = pd.merge(X_test, y_test_df, how='left', left_index=True,
-                      right_index=True)
-    new_df['preds'] = np.where(new_df['probas']
-                               < mod_class_list[0].best_thresh, 0, 1)
-    new_df['fp'] = np.where(
-        new_df['preds'] == 1, np.where(new_df['reported'] == 0, 1, 0), 0
-    )
-    new_df['fn'] = np.where(
-        new_df['preds'] == 0, np.where(new_df['reported'] == 1, 1, 0), 0
-    )
-    sample_df = pd.read_csv('../data/chrom_info.csv', index_col='Unnamed: 0')
-    fp_index = list(new_df[new_df['fn'] == 1].index.values)
-    print(sample_df[sample_df.index.isin(fp_index)])
+    fp_df, fn_df = incorrect_classifications(X_test, y_test,
+                                             mod_class_list[0])
+
+    # Profit Curve
+    cost_matrix = (0, 0, -1, 0.25)
+    profit_curve(mod_boost, X_test, y_test, cost_matrix,
+                 fig_name='../images/profit.png', save=False)
+
+
+    # Evaluate sampling
+    sampling_methods = [all_df.under_sampling(all_df.train_df),
+                        all_df.over_sampling(all_df.train_df),
+                        all_df.smote_sampling(all_df.train_df),
+                        (X_train, y_train)]
+    for X_train, y_train in sampling_methods:
+        # scores, model_list, mod_class_list = compare_models(
+        #     mod_list[:-4:-2], f1_score, X_train, X_test, y_train, y_test,
+        #     fig_name='../images/boost_rand_comp.png', save=False
+        # )
+        # print(scores)
+        mod_boost.fit(X_train, y_train)
+        print(mod_boost.confusion_matrix(X_test, y_test.values))
+
+    # sampling_methods = [all_df.under_sampling(all_df.full_df),
+    #                     all_df.over_sampling(all_df.full_df),
+    #                     all_df.smote_sampling(all_df.full_df)]
+    # for X, y in sampling_methods:
+    #     plot_learning_curve(model_list[0][0], 'Learning Curve', X, y)
+    #     plt.show()
