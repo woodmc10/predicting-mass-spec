@@ -1,4 +1,5 @@
 import pandas as pd
+from sklearn.model_selection import train_test_split
 
 
 class Data(object):
@@ -20,9 +21,44 @@ class Data(object):
         self.analytes = analytes
         self.columns = columns
         self.full_df = pd.read_csv(file, index_col='Unnamed: 0')
-        self.limited_df = self.drop_cols(self.full_df, self.columns)
-        self.no_analyte_df = self.drop_analyte_cols(self.full_df)
-        self.limited_no_analyte_df = self.drop_analyte_cols(self.limited_df)
+    
+    def filter_cols(self, filter_type=None):
+        '''Filter train_df and test_df to include only columns of interest
+        Parameters
+        ----------
+        filter_type: str
+            options: limited, no_analyte, limited_no_analyte
+        '''
+        if filter_type == 'limited':
+            filtered_df = self.drop_cols(self.full_df, self.columns)
+        elif filter_type == 'no_analyte':
+            filtered_df = self.drop_analyte_cols(self.full_df)
+        elif filter_type == 'limited_no_analyte':
+            filtered_df = self.drop_analyte_cols(self.drop_cols(self.full_df,
+                                                                self.columns))
+        elif filter_type is None:
+            filtered_df = self.full_df
+        else:
+            print('Warning: incorrect filter_type passed to filter_cols')
+            filtered_df = None
+        return filtered_df
+    
+    def train_test_split(self, test_size=0.33, filter_type=None):
+        '''Train test split the df for testing
+        Parameters
+        ----------
+        train_size: float
+            percent of dataframe for testing data
+        '''
+        df = self.filter_cols(filter_type)
+        X, y = self.pop_reported(df)
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=test_size, stratify=y, random_state=42
+            )
+        self.test_df = pd.merge(X_test, y_test, how='left',
+                                left_index=True, right_index=True)
+        self.train_df = pd.merge(X_train, y_train, how='left',
+                                 left_index=True, right_index=True)
 
     @staticmethod
     def pop_reported(df):
@@ -40,8 +76,8 @@ class Data(object):
             numpy array of targets
         '''
         df_copy = df.copy()
-        y = df_copy.pop('reported').values
-        X = df_copy.values
+        y = df_copy.pop('reported')
+        X = df_copy
         return X, y
 
     @staticmethod

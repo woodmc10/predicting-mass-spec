@@ -39,8 +39,8 @@ def variance_factor(df):
     return sorted_vif
 
 
-def compare_models(model_list, metric, X, y, thresh=0.5, fig_name='plot.png',
-                   save=False):
+def compare_models(model_list, metric, X_train, X_test, y_train, y_test,
+                   thresh=0.5, fig_name='plot.png', save=False):
     '''Generate ROC curves, threshold plots, and print out metric scores
     Parameters
     ----------
@@ -70,9 +70,9 @@ def compare_models(model_list, metric, X, y, thresh=0.5, fig_name='plot.png',
     mod_class_list = []
     metric_result = []
     fig, axes = plt.subplots(1, 2, figsize=(10, 6))
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33,
-                                                        stratify=y,
-                                                        random_state=42)
+    # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33,
+    #                                                     stratify=y,
+    #                                                     random_state=42)
     for model in model_list:
         mod = Model(model[0], metric)
         mod.fit(X_train, y_train)
@@ -108,9 +108,9 @@ if __name__ == '__main__':
 
     # compare best models from random search
     X, y = Data.pop_reported(all_df.full_df)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33,
-                                                        stratify=y,
-                                                        random_state=42)
+    all_df.train_test_split(test_size=0.33)
+    X_train, y_train = all_df.pop_reported(all_df.train_df)
+    X_test, y_test = all_df.pop_reported(all_df.test_df)
     lr = LogisticRegression(penalty='none', class_weight='balanced',
                             solver='saga', max_iter=100000)
     rf = RandomForestClassifier(class_weight='balanced_subsample')
@@ -134,7 +134,7 @@ if __name__ == '__main__':
                 (grad_boost, 'XG Boost', 'purple')]
                 # (nn_model, 'Neural Net')]
     scores, model_list, mod_class_list = compare_models(
-        mod_list[:-4:-2], f1_score, X, y,
+        mod_list[:-4:-2], f1_score, X_train, X_test, y_train, y_test,
         fig_name='../images/boost_rand_comp.png', save=False
     )
     print(scores)
@@ -166,7 +166,8 @@ if __name__ == '__main__':
                        save=False)
 
     # Evaluate XGBoost model
-    tp, fp, fn, tn = mod_class_list[0].confusion_matrix(X_test, y_test)
+    # Confusion Matrix (Bar Chart)
+    tp, fp, fn, tn = mod_class_list[0].confusion_matrix(X_test, y_test.values)
     plt.bar([1,2], [fp, 0], color=['r', 'g'], alpha=0.5,
             label='Not Reported')
     plt.bar([1,2], [0, fn], color=['g', 'g'], alpha=0.5,
@@ -177,5 +178,23 @@ if __name__ == '__main__':
     plt.legend(title='Actual Result')
     plt.title('Less Confusion')
 
-    plot_learning_curve(boosted_forest, 'Learning Curve', X, y)
+    # Learning Curve
+    # plot_learning_curve(boosted_forest, 'Learning Curve', X, y)
     plt.show()
+
+    # List of incorrectly classified chromatograms
+    y_test_df = pd.DataFrame(y_test)
+    y_test_df['probas'] = mod_class_list[0].predict_proba(X_test)[:, 1]
+    new_df = pd.merge(X_test, y_test_df, how='left', left_index=True,
+                      right_index=True)
+    new_df['preds'] = np.where(new_df['probas']
+                               < mod_class_list[0].best_thresh, 0, 1)
+    new_df['fp'] = np.where(
+        new_df['preds'] == 1, np.where(new_df['reported'] == 0, 1, 0), 0
+    )
+    new_df['fn'] = np.where(
+        new_df['preds'] == 0, np.where(new_df['reported'] == 1, 1, 0), 0
+    )
+    sample_df = pd.read_csv('../data/chrom_info.csv', index_col='Unnamed: 0')
+    fp_index = list(new_df[new_df['fn'] == 1].index.values)
+    print(sample_df[sample_df.index.isin(fp_index)])
