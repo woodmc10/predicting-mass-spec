@@ -70,14 +70,18 @@ if __name__ == '__main__':
         neurons2=[1, 5, 10, 15, 25, 50]
     )
     NN = Model(nn_model, f1_score)
-    print(NN.hyper_search(distributions_nn, X_train, y_train))
-    print(NN.confusion_matrix(X_test, y_test.values))
-    print(NN.hyper_search(distributions_nn, X_train, y_train))
-    print(NN.confusion_matrix(X_test, y_test.values))
+    R1a_serach = NN.hyper_search(distributions_nn, X_train, y_train)
+    R1a_matrix = NN.confusion_matrix(X_test, y_test.values)
+    R1b_search = NN.hyper_search(distributions_nn, X_train, y_train)
+    R1b_matrix = NN.confusion_matrix(X_test, y_test.values)
 
     # Change to over sampling and repeat
     X_train, y_train = all_df.over_sampling(all_df.train_df)
 
+    print(R1a_serach)
+    print(R1a_matrix)
+    print(R1b_search)
+    print(R1b_matrix)
     print(NN.hyper_search(distributions_nn, X_train, y_train))
     print(NN.confusion_matrix(X_test, y_test.values))
     print(NN.hyper_search(distributions_nn, X_train, y_train))
