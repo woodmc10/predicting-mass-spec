@@ -105,28 +105,39 @@ The coefficients assigned by the logistic regression follow the importance a che
 ### Comparison
 The F1 score of the logistic regression and random forest models with the features reduced to remove collinearity were less than ideal. In order to determine the best performance possible all the features were used to train a Random Forest and an XGBoost model. The XGBoost is an extreme gradient boosted algorithm that improves the performance of gradient boosted forests. The XGBoost model out performed the Random Forest, but just barely. When all features are included the XGBoost had an F1 score of 0.86 and the Random Forest had a score of 0.85.
 
-![boost_forest_comp]('../images/boost_forest_comp.png')
+![boost_forest_comp]('images/boost_forest_comp.png')
 Figure 8: ROC curve and F1 score comparison over various thresholds for XGBoost Classifier and Random Forest Classifier 
 
 ### Interpretation
-The XGBoost model put much more relative importance to the categorical features than the Random Forest model. The categorical features are the one hot encoded analyte names. For the XGBoost model it was the most useful to know if the chromatogram was for Myclobutanil. After that the peak height, area and width features were the most important. This was consistent with both the Random Forest and XGBoost models. These features are the ones used to determine the concentration of the analyte in the sample, so it is good to see that the models are using them for determining if the chromatogram should be reported. 
+The XGBoost model put much more relative importance to the categorical features than the Random Forest model. The categorical features are the one hot encoded analyte names. For the XGBoost model it was the most useful to know if the chromatogram was for Myclobutanil. For the continuous features the peak height, area and width features were the most important. This was consistent with both the Random Forest and XGBoost models. These features are the ones used to determine the concentration of the analyte in the sample, so it is good to see that the models are using them for determining if the chromatogram should be reported. 
 
-![boost_forset_feat_import]('../boost_rand_features.png')
+![boost_forset_feat_import]('images/boost_rand_features.png')
 Figure 9: Feature Importances for XGBoost Classifier and Random Forest Classifier
 
 ## Best Model Evalutaion
-- Bar Chart confustion matrix
-- Profit curve
-- Learning Curve
+The XGBoost model performed the best. It had the highest F1 score at 0.86 and did the best categorizing the reported chromatograms, only missing 9 reported chromatograms. The following chart shows all of the misclassified samples from the test data.
+
+![bar_confusion]('../bar_confusion.png')
+Figure 10: Bar chart of incorrectly classified chromatograms
+
+This chart was created using the threshold that optimized the F1 score. It is likely that a lab would want to change the threshold used for predictions in order to reduce false negatives, or to reduce false positives. In order to find the best threshold for predictions a profit curve can be used to compare the threshold to a profit. The profit is determined by adding a cost or profit to each of the classifications. For this profit curve all predicted positive samples were assigned a profit of $0. Currently all chromatograms are being visually inspected by a chemist, and if this model is implemented chromatograms that are predicted positive will continue to be inspected. True negatives were assigned a profit of $0.25 because there will be no visual inspection on these chromatograms, saving time. Finally, false negatives were assigned a loss of $1.00, these chromatograms are the ones that should be reported but no chemist evaluates because the model predicts they should not be reported. 
+
+![profit_curve](''images/profit_curve.png)
+Figure 11: Profit curve comparing profits to thresholds
+
+The following are images of incorrectly classified chromatograms...
+
 - Images of incorrectly classified chromatograms
 
+- Learning Curve
+
 # Conclusion
-Both the logistic regression and random forest models are finding signal to classify the chromatograms. The peak area is the most important feature for both models. Many of the chromatograms with integrated peaks are finding the analyte of interest, but the concentration in the unreported samples is below the reporting limit. Since the area is directly related to the concentration it is not surprising that these models are putting a large weight on that feature. 
+Both the logistic regression and random forest models are capable of classifing the chromatograms, but with an unacceptable amount of error. The Random Forest and XGBoost models trained with all of the featuers were able to classify the chromatograms with better precision and recall. The peak area, height and width are the most important continuous features for the models. Many of the chromatograms with integrated peaks are finding the analyte of interest, but the concentration in the unreported samples is below the reporting limit. Since the area is directly related to the concentration it is not surprising that these models are putting a large weight on that feature. 
+
+This type of classification could be used to reduce the number of chemists required to support operations in a number of labs using chromatographic testing. Even if the lab does not create enough chromatograms to employ chemists full time on visual inspection of data, this model would allow some of the chemist time to be used for lab work, validations or research and development. 
 
 ## Future Work
 - Determine F-statistic and p-values for logistic regressions
-- Create partial dependence plots for the random forest
 - Identify incorrectly classified chromatograms to determine what is causing problems for the models
-- Repeat logistic and random forest modeling with all features to see if predictions improve
 - Try other classification algorithms including Neural Nets
 - Use sampling techniques such as undersampling, oversampling and SMOTE to account for the imbalance in the data

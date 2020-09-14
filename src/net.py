@@ -11,11 +11,11 @@ from model_class import Model
 from data_class import Data, create_data
 
 
-def create_model(optimizer='adam', init_mode='uniform', activation1='relu',
-                 activation2='relu', dropout_rate=0.2, weight_constraint=4,
-                 neurons1=10, neurons2=5):
+def create_model(optimizer='Adagrad', init_mode='zero', activation1='softsign',
+                 activation2='softsign', dropout_rate=0.5, weight_constraint=3,
+                 neurons1=15, neurons2=50):
     nn_model = Sequential()
-    nn_model.add(Dense(12, input_dim=29, activation=activation1,
+    nn_model.add(Dense(12, input_dim=28, activation=activation1,
                        kernel_initializer=init_mode,
                        kernel_constraint=max_norm(weight_constraint)))
     nn_model.add(Dropout(dropout_rate))
@@ -23,9 +23,7 @@ def create_model(optimizer='adam', init_mode='uniform', activation1='relu',
     nn_model.add(Dense(1, activation='sigmoid'))
     nn_model.compile(loss='binary_crossentropy', optimizer=optimizer,
                      metrics=[Recall()])
-                    #  metrics=[SpecificityAtSensitivity(0.75)])
     return nn_model
-
 
 def f1_eval(y_pred, dtrain):
     # Calculate f1_score for neural net tuning
@@ -70,19 +68,30 @@ if __name__ == '__main__':
         neurons2=[1, 5, 10, 15, 25, 50]
     )
     NN = Model(nn_model, f1_score)
-    R1a_serach = NN.hyper_search(distributions_nn, X_train, y_train)
-    R1a_matrix = NN.confusion_matrix(X_test, y_test.values)
-    R1b_search = NN.hyper_search(distributions_nn, X_train, y_train)
-    R1b_matrix = NN.confusion_matrix(X_test, y_test.values)
+    print(NN.hyper_search(distributions_nn, X_train, y_train))
+    # ({'neurons1': 15, 'activation2': 'linear', 'weight_constraint': 2,
+    # 'neurons2': 25, 'dropout_rate': 0.5, 'optimizer': 'Adamax',
+    # 'init_mode': 'glorot_uniform', 'activation1': 'softplus',
+    # 'batch_size': 100, 'epochs': 25}, 0.3632652246007728)
+    print(NN.hyper_search(distributions_nn, X_train, y_train))
+    # R1b_matrix = NN.confusion_matrix(X_test, y_test.values)
+    # ({'weight_constraint': 4, 'dropout_rate': 0.5, 'activation2': 'relu',
+    # 'batch_size': 200, 'activation1': 'relu', 'optimizer': 'RMSprop',
+    # 'epochs': 50, 'neurons2': 5, 'init_mode': 'he_normal',
+    # 'neurons1': 1}, 0.4642209424562366)
 
     # Change to over sampling and repeat
     X_train, y_train = all_df.over_sampling(all_df.train_df)
 
-    print(R1a_serach)
-    print(R1a_matrix)
-    print(R1b_search)
-    print(R1b_matrix)
+
     print(NN.hyper_search(distributions_nn, X_train, y_train))
-    print(NN.confusion_matrix(X_test, y_test.values))
+    # ({'init_mode': 'glorot_uniform', 'batch_size': 100,
+    # 'optimizer': 'Adamax', 'dropout_rate': 0.5, 'weight_constraint': 2,
+    # 'neurons2': 25, 'activation1': 'softplus', 'activation2': 'linear',
+    # 'epochs': 25, 'neurons1': 15}, 0.636014040161523)
     print(NN.hyper_search(distributions_nn, X_train, y_train))
-    print(NN.confusion_matrix(X_test, y_test.values))
+    # ({'dropout_rate': 0.5, 'init_mode': 'zero', 'activation1': 'softsign',
+    # 'weight_constraint': 3, 'neurons1': 15, 'optimizer': 'Adagrad',
+    # 'batch_size': 100, 'epochs': 50, 'neurons2': 50,
+    # 'activation2': 'softsign'}, 0.655386722306166)
+    

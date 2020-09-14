@@ -29,6 +29,7 @@ class Model(object):
         self.metric = metric
         self.pipeline = Pipeline([('scaler', StandardScaler()),
                                   ('model', self.model)])
+        self.best_thresh = None
 
     def fit(self, X, y):
         self.pipeline.fit(X, y)
