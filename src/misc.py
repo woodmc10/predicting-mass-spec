@@ -16,9 +16,7 @@ from model_class import Model
 from plots import (feature_comparison, plot_learning_curve, incorrect_plot,
                    profit_curve)
 from xgboost import XGBClassifier
-from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
 from collections import defaultdict
-from net import create_model
 
 
 def variance_factor(df):
@@ -72,9 +70,7 @@ def compare_models(model_list, metric, X_train, X_test, y_train, y_test,
     mod_class_list = []
     metric_result = []
     fig, axes = plt.subplots(1, 2, figsize=(10, 6))
-    # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33,
-    #                                                     stratify=y,
-    #                                                     random_state=42)
+
     for model in model_list:
         mod = Model(model[0], metric)
         mod.fit(X_train, y_train)
@@ -144,8 +140,6 @@ def incorrect_classifications(X_test, y_test, model,
 
 if __name__ == '__main__':
     all_df = create_data('../data/merged_df_test.csv', 'All')
-    # all_df.full_df['random'] = np.random.random(len(all_df.full_df))
-    # print(variance_factor(all_df.full_df))
 
     # Create train/test sets
     X, y = Data.pop_reported(all_df.full_df)
@@ -170,20 +164,18 @@ if __name__ == '__main__':
                                scale_pos_weight=1,
                                reg_alpha=0.2,
                                seed=27)
-    nn_model = KerasClassifier(build_fn=create_model, batch_size=100, epochs=50)
     
     # Compare best models
     mod_list = [(lr, 'Logistic Regression', 'blue'),
                 (rf, 'Random Forest', 'orange'),
                 (xgb, 'XGBoost Classifier', 'purple'),
-                (grad_boost, 'XG Boost', 'purple'),
-                (nn_model, 'Neural Net', 'red')]
+                (grad_boost, 'XG Boost', 'purple')]
     scores, model_list, mod_class_list = compare_models(
-        mod_list[:-4:- 1], f1_score, X_train, X_test, y_train, y_test,
+        mod_list[:-4:-2], f1_score, X_train, X_test, y_train, y_test,
         fig_name='../images/boost_rand_comp.png', save=False
     )
     print(scores)
-    '''
+
     # plot feature importance and coefs
     # log_reg = model_list[0][0]
     # log_tup = ('green', 'Logistic Regression', 'Coefficient Value')
@@ -241,4 +233,3 @@ if __name__ == '__main__':
     # for X, y in sampling_methods:
     #     plot_learning_curve(model_list[0][0], 'Learning Curve', X, y)
     #     plt.show()
-    '''
