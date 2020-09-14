@@ -13,7 +13,7 @@ import statsmodels.api as sm
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from data_class import Data, create_data
 from model_class import Model
-from plots import (feature_comparison, plot_learning_curve, incorrect_plot,
+from plots import (feature_comparison, plot_learning_curve, confusion_plot,
                    profit_curve)
 from xgboost import XGBClassifier
 from collections import defaultdict
@@ -196,21 +196,26 @@ if __name__ == '__main__':
     # Confusion Matrix (Bar Chart)
     mod_boost = mod_class_list[0]
     tp, fp, fn, tn = mod_boost.confusion_matrix(X_test, y_test.values)
-    incorrect_plot(fp, fn, save=False)
+    confusion_plot(tp, fp, fn, tn, fig_name = '../images/conf.png', save=False)
     print(tp, fp, fn, tn)
 
     # Learning Curve
-    # plot_learning_curve(boosted_forest, 'Learning Curve', X, y)
+    # plot_learning_curve(boosted_forest, 'Learning Curve', X, y, axes=None,
+    #                     ylim=None, cv=10, n_jobs=-1,
+    #                     train_sizes=np.linspace(.1, 1.0, 50))
     # plt.show()
+    # plt.savefig('../images/learning.png')
 
     # List of incorrectly classified chromatograms
     fp_df, fn_df = incorrect_classifications(X_test, y_test,
-                                             mod_class_list[0])
+                                             mod_boost)
 
     # Profit Curve
-    cost_matrix = (0, 0, -1, 0.25)
-    profit_curve(mod_boost, X_test, y_test, cost_matrix,
+    cost_matrix = (0, 0, -1, 0.5)
+    fig, ax = plt.subplots(1)
+    profit_curve(mod_boost, X_test, y_test, cost_matrix, ax=ax, label='XGBoost',
                  fig_name='../images/profit.png', save=False)
+    plt.show()
 
 
     # Evaluate sampling
@@ -218,6 +223,9 @@ if __name__ == '__main__':
                         all_df.over_sampling(all_df.train_df),
                         all_df.smote_sampling(all_df.train_df),
                         (X_train, y_train)]
+    fig, ax = plt.subplots(1)
+    label_sampling = ['Under', 'Over', 'SMOTE', 'None']
+    counter = 0
     for X_train, y_train in sampling_methods:
         # scores, model_list, mod_class_list = compare_models(
         #     mod_list[:-4:-2], f1_score, X_train, X_test, y_train, y_test,
@@ -225,11 +233,22 @@ if __name__ == '__main__':
         # )
         # print(scores)
         mod_boost.fit(X_train, y_train)
+        ax = profit_curve(mod_boost, X_test, y_test, cost_matrix, ax=ax,
+                          label=label_sampling[counter],
+                          fig_name='test.png', save=False)
         print(mod_boost.confusion_matrix(X_test, y_test.values))
-
+        counter += 1
+    plt.show()
     # sampling_methods = [all_df.under_sampling(all_df.full_df),
     #                     all_df.over_sampling(all_df.full_df),
     #                     all_df.smote_sampling(all_df.full_df)]
     # for X, y in sampling_methods:
     #     plot_learning_curve(model_list[0][0], 'Learning Curve', X, y)
     #     plt.show()
+
+    X, y = all_df.under_sampling(all_df.full_df)
+    plot_learning_curve(boosted_forest, 'Learning Curve', X, y, axes=None,
+                        ylim=None, cv=10, n_jobs=-1,
+                        train_sizes=np.linspace(.1, 1.0, 10))
+    plt.show()
+    plt.savefig('../images/learning.png')

@@ -78,7 +78,7 @@ class Data(object):
         y_ros:
             random over sampling of the targets
         '''
-        ros = RandomOverSampler()
+        ros = RandomOverSampler(random_state=42)
         X, y = self.pop_reported(df)
         X_ros, y_ros = ros.fit_sample(X, y)
         return X_ros, y_ros
@@ -96,7 +96,7 @@ class Data(object):
         y_rus:
             random under sampling of the targets
         '''
-        rus = RandomUnderSampler()
+        rus = RandomUnderSampler(random_state=42)
         X, y = self.pop_reported(df)
         X_rus, y_rus = rus.fit_sample(X, y)
         return X_rus, y_rus
@@ -114,7 +114,7 @@ class Data(object):
         y_smote:
             SMOTE over sampling of the targets
         '''
-        smote = SMOTE()
+        smote = SMOTE(random_state=42)
         X, y = self.pop_reported(df)
         X_smote, y_smote = smote.fit_sample(X, y)
         return X_smote, y_smote

@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import matplotlib.patches as mpatches
 from matplotlib.lines import Line2D
 import seaborn as sns
@@ -575,7 +576,7 @@ def plot_learning_curve(estimator, title, X, y, axes=None, ylim=None, cv=None,
     axes.legend(loc="best")
 
 
-def incorrect_plot(fp, fn, fig_name='plot.png', save=False):
+def confusion_plot(tp, fp, fn, tn, fig_name='plot.png', save=False):
     '''Plot the false positive and false negatives
     Parameters
     ----------
@@ -588,31 +589,47 @@ def incorrect_plot(fp, fn, fig_name='plot.png', save=False):
     save: bool
         if true save the plot, if false show the plot
     '''
-    plt.bar([1,2], [fp, 0], color=['r', 'g'], alpha=0.5,
-            label='Not Reported')
-    plt.bar([1,2], [0, fn], color=['g', 'g'], alpha=0.5,
-            label='Reported')
-    plt.xlabel('Predicted Results')
-    plt.ylabel('Incorrect Classifications')
-    plt.xticks([1, 2], ['Reported', 'Not Reported'])
-    plt.legend(title='Actual Result')
-    plt.title('Less Confusion')
+    fig, axes = plt.subplots(1, 2)
+    axes[0].bar([1, 2], [fp, tn], color=['r', 'r'], alpha=0.5, width=0.4,
+            align='edge', label='Not Reported')
+    axes[0].bar([1, 2], [tp, fn], color=['g', 'g'], alpha=0.5, width=-0.4,
+            align='edge', label='Reported')
+    axes[0].legend(title='Actual Outcome')
+    axes[0].set_title('All Classifications')
+    axes[1].bar([1, 2], [fp, 0], color=['r', 'r'], alpha=0.5, width=0.4,
+            align='center')
+    axes[1].bar([1, 2], [0, fn], color=['g', 'g'], alpha=0.5, width=-0.4,
+            align='center')
+    axes[1].set_title('Incorrect Classifications')
+    axes[1].yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+    for ax in axes:
+        ax.set_xlabel('Predicted Results')
+        ax.set_ylabel('Samples')
+        ax.set_xticks([1, 2])
+        ax.set_xticklabels(['Reported', 'Not Reported'])
+    plt.tight_layout()
     if save:
         plt.savefig(fig_name)
     else:
         plt.show()
 
 
-def profit_curve(model, X_test, y_test, cost_matrix,
+def profit_curve(model, X_test, y_test, cost_matrix, ax, label,
                  fig_name='plot.png', save=False):
     ''' Plot a profit curve based
     Parameters
     ----------
     model: Model class
         model to generate predictions
+    X_test: numpy array
+        array of features
+    y_test: numpy array
+        array of targest
     cost_matrix: 
         cost benefit matrix 
         order: fp, tp, fn, tn
+    ax: matplotlib ax
+        ax to plot curve
     fig_name: str
         file name for saving plot
     save: bool
@@ -620,19 +637,29 @@ def profit_curve(model, X_test, y_test, cost_matrix,
     '''
     fpr, tpr, thresh = model.roc(X_test, y_test)
     thresh[0] = 1
+    # convert fpr/tnr to include un-integrated samples
     tnr = 1 - fpr
+    fpc = fpr * sum(y_test)
+    tnc = tnr * sum(y_test)
+    tnc = tnc + 27445
+    nc = tnc + fpc
+    tnr = tnc/nc
+    fpr = fpc/nc
+
     fnr = 1 - tpr
     fpc, tpc, fnc, tnc = cost_matrix
     cost_arr = fpr * fpc + tpr * tpc + fnr * fnc + tnr * tnc
-    plt.plot(thresh, cost_arr)
-    plt.title('Profit Curve')
-    plt.xlabel('Threshold')
-    plt.ylabel('Profit')
-    if save:
-        plt.savefig(fig_name)
-    else:
-        plt.show()
-
+    cost_arr = cost_arr
+    ax.plot(thresh, cost_arr, label=label)
+    ax.set_title('Profit Curve')
+    ax.set_xlabel('Threshold')
+    ax.set_ylabel('Profit per Sample')
+    ax.legend()
+    # if save:
+    #     plt.savefig(fig_name)
+    # else:
+    #     plt.show()
+    return ax
 
 if __name__ == '__main__':
 
