@@ -5,8 +5,7 @@ import functools
 import time
 
 
-def create_reported_df(analyte='All', path=r'../data',
-                       pos_file='../data/pest_pos.xlsx'):
+def create_reported_df(path=r'../data', pos_file='../data/pest_pos.xlsx'):
     '''
     Full pipeline calling all other functions to create the final dataframe
     Parameters
@@ -54,19 +53,32 @@ def create_reported_df(analyte='All', path=r'../data',
     # Merge instrument data and positive reports
     reported_full_df = merge_reports(clean_df, pos_df)
 
+    return reported_full_df
+
+
+def analyte_filter(df, analyte='All'):
+    '''One hot encode the analyte column for all analytes or one analyte
+    Parameters
+    ----------
+    df: pandas DataFrame
+        dataframe including an 'analyte' column
+    analyte: str
+        name of analyte to keep or 'All' for all analytes
+    Returns
+    -------
+    one_hot_df: pandas DataFrame
+        dataframe with one hot encode columns for analytes
+    '''
     if analyte == 'All':
         # One-hot-encode analytes
-        reported_full_df = pd.get_dummies(reported_full_df,
-                                          columns=['analyte'],
-                                          drop_first=True)
+        one_hot_df = pd.get_dummies(df, columns=['analyte'], drop_first=True)
         # drop_first drops Abamectin
     else:
         # Filter on analyte name
-        reported_full_df = reported_full_df[reported_full_df['analyte'] ==
-                                            analyte]
-
-    return reported_full_df
-
+        filtered_df = df[df['analyte'] == analyte]
+        one_hot_df = pd.get_dummies(filtered_df, columns=['analyte'])
+    return one_hot_df
+        
 
 
 def timer(func):
@@ -132,18 +144,33 @@ def files_to_dfs(files):
         dataframe containing only sample information
     '''
     df_list = []
-    for file in files:
-        try:
-            df = pd.read_csv(file, skip_blank_lines=False)
-            #TODO: try to filter df without reading in twice
-            start_row = df[df.iloc[:, 0].str.startswith('Sample Name',
-                                                        na=False)].index[0]
-            df_sub = pd.read_csv(file, delimiter='\t', skiprows=start_row)
-            # breakpoint()
+    for file_ in files:
+        start_row = line_num_for_phrase_in_file('Sample Name', file_)
+        if start_row >= 0:
+            df_sub = pd.read_csv(file_, delimiter='\t', skiprows=start_row)
             df_list.append(df_sub)
-        except:
-            print(f'😱{file} caused an error, check the file.')
+        else:
+            print(f'😱{file_} does not contain "Sample Name", check the file.')
     return df_list
+
+
+def line_num_for_phrase_in_file(phrase='Sample Name', filename='file.txt'):
+    '''Find the line number where the phrase is located
+    Parameters
+    ----------
+    phrase: str
+        string to locate in the file
+    filename: str
+        file to search through
+    Return
+    ------
+    line containing the phrase
+    '''
+    with open(filename,'r') as f:
+        for (i, line) in enumerate(f):
+            if phrase in line:
+                return i - 1
+    return -1
 
 
 def reduce_df(dfs, cols):
@@ -269,7 +296,8 @@ def calculate_cols(df):
 
 if __name__ == '__main__':
 
-    reported_df = create_reported_df('All')
+    reported_df = create_reported_df()
+    reported_df = analyte_filter(reported_df, 'All')
 
     print('Count:', reported_df['reported'].count())
     print('Reported:', reported_df['reported'].sum())
