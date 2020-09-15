@@ -105,7 +105,7 @@ The coefficients assigned by the logistic regression follow the importance a che
 ### Comparison
 The F1 score of the logistic regression and random forest models with the features reduced to remove collinearity were less than ideal. In order to determine the best performance possible all the features were used to train a Random Forest and an XGBoost model. The XGBoost is an extreme gradient boosted algorithm that improves the performance of gradient boosted forests. The XGBoost model out performed the Random Forest, but just barely. When all features are included the XGBoost had an F1 score of 0.86 and the Random Forest had a score of 0.85.
 
-![boost_forest_comp](images/boost_forest_comp.png)
+![boost_forest_comp](images/boost_rand_comp.png)
 Figure 8: ROC curve and F1 score comparison over various thresholds for XGBoost Classifier and Random Forest Classifier 
 
 ### Interpretation

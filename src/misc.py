@@ -224,15 +224,15 @@ if __name__ == '__main__':
                         all_df.pop_reported(all_df.train_df)]
     label_sampling = ['Under', 'Over', 'SMOTE', 'None']
     label_models = ['Logistic', 'Random Forest', 'Tuned XGBoost']
-    model_colors = ['blue', 'orange', 'purple']
+    model_colors = ['C0', 'C1', 'purple']
     stack_profit_curves(mod_class_list, sampling_methods, mod_class_list[2],
                         label_models, label_sampling, X_test, y_test,
                         cost_matrix, model_colors,
-                        fig_name='../images/profit_curve', save=False)
+                        fig_name='../images/profit_curve', save=True)
    
 
-    X, y = all_df.under_sampling(all_df.full_df)
-    plot_learning_curve(mod_boost.model, 'Learning Curve', X, y, axes=None,
-                        ylim=None, cv=10, n_jobs=-1,
-                        train_sizes=np.linspace(.1, 1.0, 10))
-    plt.savefig('../images/learning.png')
+    # X, y = all_df.under_sampling(all_df.full_df)
+    # plot_learning_curve(mod_boost.model, 'Learning Curve', X, y, axes=None,
+    #                     ylim=None, cv=10, n_jobs=-1,
+    #                     train_sizes=np.linspace(.1, 1.0, 10))
+    # plt.savefig('../images/learning.png')
