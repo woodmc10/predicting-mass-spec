@@ -105,31 +105,37 @@ The coefficients assigned by the logistic regression follow the importance a che
 ### Comparison
 The F1 score of the logistic regression and random forest models with the features reduced to remove collinearity were less than ideal. In order to determine the best performance possible all the features were used to train a Random Forest and an XGBoost model. The XGBoost is an extreme gradient boosted algorithm that improves the performance of gradient boosted forests. The XGBoost model out performed the Random Forest, but just barely. When all features are included the XGBoost had an F1 score of 0.86 and the Random Forest had a score of 0.85.
 
-![boost_forest_comp]('images/boost_forest_comp.png')
+![boost_forest_comp](images/boost_forest_comp.png)
 Figure 8: ROC curve and F1 score comparison over various thresholds for XGBoost Classifier and Random Forest Classifier 
 
 ### Interpretation
 The XGBoost model put much more relative importance to the categorical features than the Random Forest model. The categorical features are the one hot encoded analyte names. For the XGBoost model it was the most useful to know if the chromatogram was for Myclobutanil. For the continuous features the peak height, area and width features were the most important. This was consistent with both the Random Forest and XGBoost models. These features are the ones used to determine the concentration of the analyte in the sample, so it is good to see that the models are using them for determining if the chromatogram should be reported. 
 
-![boost_forset_feat_import]('images/boost_rand_features.png')
+![boost_forset_feat_import](images/boost_rand_features.png)
 Figure 9: Feature Importances for XGBoost Classifier and Random Forest Classifier
 
 ## Best Model Evalutaion
 The XGBoost model performed the best. It had the highest F1 score at 0.86 and did the best categorizing the reported chromatograms, only missing 9 reported chromatograms. The following chart shows all of the misclassified samples from the test data.
 
-![bar_confusion]('../bar_confusion.png')
+![bar_confusion](images/bar_confusion.png)
 Figure 10: Bar chart of incorrectly classified chromatograms
 
 This chart was created using the threshold that optimized the F1 score. It is likely that a lab would want to change the threshold used for predictions in order to reduce false negatives, or to reduce false positives. In order to find the best threshold for predictions a profit curve can be used to compare the threshold to a profit. The profit is determined by adding a cost or profit to each of the classifications. For this profit curve all predicted positive samples were assigned a profit of $0. Currently all chromatograms are being visually inspected by a chemist, and if this model is implemented chromatograms that are predicted positive will continue to be inspected. True negatives were assigned a profit of $0.25 because there will be no visual inspection on these chromatograms, saving time. Finally, false negatives were assigned a loss of $1.00, these chromatograms are the ones that should be reported but no chemist evaluates because the model predicts they should not be reported. 
 
-![profit_curve](''images/profit_curve.png)
+![profit_curve](images/profit_curve.png)
 Figure 11: Profit curve comparing profits to thresholds
+
+These profit curves show that the best performance from the XGBoost model comes when undersampling is used to adjust for the class imbalance. Undersampling does not result in the best F1 score, but it does the best job of reducing false negatives which are more costly than false positives. Undersampling allows for using a relatively higher threshold of 0.4 without resulting in as many false positives as the other sampling techniques.
+
+Since undersampling reduces the number of smaples available for training the model a learning curve was generated to evaluate if more data would improve the model performance. 10 fold cross validation was performed with varying amounts of the data to determine the accuracy of the model when trained with different numbers of data points. Accuracy was used to evaluate the cross validation because the undersampling will result in balanced classes. The learning curve shows that the model is still improving with increasing sample numbers. Thus it would be beneficial to obtain more data for the model to use for training.
+
+![learning_curve](images/learning.png)
+
 
 The following are images of incorrectly classified chromatograms...
 
 - Images of incorrectly classified chromatograms
 
-- Learning Curve
 
 # Conclusion
 Both the logistic regression and random forest models are capable of classifing the chromatograms, but with an unacceptable amount of error. The Random Forest and XGBoost models trained with all of the featuers were able to classify the chromatograms with better precision and recall. The peak area, height and width are the most important continuous features for the models. Many of the chromatograms with integrated peaks are finding the analyte of interest, but the concentration in the unreported samples is below the reporting limit. Since the area is directly related to the concentration it is not surprising that these models are putting a large weight on that feature. 
@@ -139,5 +145,3 @@ This type of classification could be used to reduce the number of chemists requi
 ## Future Work
 - Determine F-statistic and p-values for logistic regressions
 - Identify incorrectly classified chromatograms to determine what is causing problems for the models
-- Try other classification algorithms including Neural Nets
-- Use sampling techniques such as undersampling, oversampling and SMOTE to account for the imbalance in the data

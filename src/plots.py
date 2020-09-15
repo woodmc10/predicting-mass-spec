@@ -614,7 +614,7 @@ def confusion_plot(tp, fp, fn, tn, fig_name='plot.png', save=False):
         plt.show()
 
 
-def profit_curve(model, X_test, y_test, cost_matrix, ax, label,
+def profit_curve(model, X_test, y_test, cost_matrix, ax, label, color=None,
                  fig_name='plot.png', save=False):
     ''' Plot a profit curve based
     Parameters
@@ -630,6 +630,10 @@ def profit_curve(model, X_test, y_test, cost_matrix, ax, label,
         order: fp, tp, fn, tn
     ax: matplotlib ax
         ax to plot curve
+    label: str
+        label for curve
+    color: str
+        color for curve
     fig_name: str
         file name for saving plot
     save: bool
@@ -650,7 +654,7 @@ def profit_curve(model, X_test, y_test, cost_matrix, ax, label,
     fpc, tpc, fnc, tnc = cost_matrix
     cost_arr = fpr * fpc + tpr * tpc + fnr * fnc + tnr * tnc
     cost_arr = cost_arr
-    ax.plot(thresh, cost_arr, label=label)
+    ax.plot(thresh, cost_arr, label=label, color=color)
     ax.set_title('Profit Curve')
     ax.set_xlabel('Threshold')
     ax.set_ylabel('Profit per Sample')
@@ -659,7 +663,7 @@ def profit_curve(model, X_test, y_test, cost_matrix, ax, label,
 
 def stack_profit_curves(model_list, sample_list, mod, label_model_list,
                         label_sample_list, X_test, y_test, cost_matrix,
-                        fig_name='plot.png', save=False):
+                        color_list, fig_name='plot.png', save=False):
     ''' Create two plots to compare profit curves, one comparing sampling
     approach, one comparing models
     Parameters
@@ -680,6 +684,8 @@ def stack_profit_curves(model_list, sample_list, mod, label_model_list,
         array of test set targets for creating profit curve
     cost_matrix: tuple
         floats describing the cost of each classification type
+    color_list: list
+        list of strings for colors in model comparison
     fig_name: str
         location to save plot
     save: bool
@@ -687,17 +693,18 @@ def stack_profit_curves(model_list, sample_list, mod, label_model_list,
     '''
     fig, axes = plt.subplots(2, 1, figsize=(6, 8))
     counter = 0
+    for index, mod in enumerate(model_list):
+        axes[0] = profit_curve(mod, X_test, y_test, cost_matrix, ax=axes[0],
+                          label=label_model_list[index],
+                          color=color_list[index])
+    axes[0].set_title('Model Comparison (no minority sampling)')
     for X_train, y_train in sample_list:
         mod.fit(X_train, y_train)
         axes[1] = profit_curve(mod, X_test, y_test, cost_matrix, ax=axes[1],
                           label=label_sample_list[counter])
         counter += 1
     axes[1].set_title('Sampling Comparison (Tuned XGBoost)')
-    for index, mod in enumerate(model_list):
-        mod.fit(X_train, y_train)
-        axes[0] = profit_curve(mod, X_test, y_test, cost_matrix, ax=axes[0],
-                          label=label_model_list[index])
-    axes[0].set_title('Model Comparison (no minority sampling)')
+    X_train, y_train = sample_list[3]
     plt.tight_layout()
     if save:
         plt.savefig(fig_name)
