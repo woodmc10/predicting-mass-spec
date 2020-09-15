@@ -655,11 +655,54 @@ def profit_curve(model, X_test, y_test, cost_matrix, ax, label,
     ax.set_xlabel('Threshold')
     ax.set_ylabel('Profit per Sample')
     ax.legend()
-    # if save:
-    #     plt.savefig(fig_name)
-    # else:
-    #     plt.show()
     return ax
+
+def stack_profit_curves(model_list, sample_list, mod, label_model_list,
+                        label_sample_list, X_test, y_test, cost_matrix,
+                        fig_name='plot.png', save=False):
+    ''' Create two plots to compare profit curves, one comparing sampling
+    approach, one comparing models
+    Parameters
+    ----------
+    model_list: list
+        list of models from Model class for comparison
+    sample_list: list
+        list of sampling types from Data class for comparison
+    mod: Model class
+        base model for sample type comparison
+    label_model_list: list
+        list of strings for labels in model comparison plot
+    label_sample_list:
+        list of strings for labels in sample comparison plot
+    X_test: numpy array
+        array of test set features for creating profit curve
+    y_test: numpy array
+        array of test set targets for creating profit curve
+    cost_matrix: tuple
+        floats describing the cost of each classification type
+    fig_name: str
+        location to save plot
+    save: bool
+        if true save fig, if false show fig
+    '''
+    fig, axes = plt.subplots(2, 1, figsize=(6, 8))
+    counter = 0
+    for X_train, y_train in sample_list:
+        mod.fit(X_train, y_train)
+        axes[1] = profit_curve(mod, X_test, y_test, cost_matrix, ax=axes[1],
+                          label=label_sample_list[counter])
+        counter += 1
+    axes[1].set_title('Sampling Comparison (Tuned XGBoost)')
+    for index, mod in enumerate(model_list):
+        mod.fit(X_train, y_train)
+        axes[0] = profit_curve(mod, X_test, y_test, cost_matrix, ax=axes[0],
+                          label=label_model_list[index])
+    axes[0].set_title('Model Comparison (no minority sampling)')
+    plt.tight_layout()
+    if save:
+        plt.savefig(fig_name)
+    else:
+        plt.show()
 
 if __name__ == '__main__':
 

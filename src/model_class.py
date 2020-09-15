@@ -187,7 +187,7 @@ class Model(object):
         self.best_thresh = thresholds[np.argmax(metrics)]
         return ax, self.best_thresh
 
-    def confusion_matrix(self, X, y):
+    def confusion_matrix(self, X, y, thresh=None):
         '''Calculate fp, fn, tp, tn for a given dataset
         Params
         ------
@@ -195,15 +195,18 @@ class Model(object):
             array of features
         y: numpy array
             array of tagets
+        thresh: float
+            threshold at which to calculate confusion matrix
         Return:
         -------
         fp, fn, tp, tn: int
             results evaluated at the best threshold if present
         '''
-        if self.best_thresh is None:
-            thresh = 0.5
-        else:
-            thresh = self.best_thresh
+        if thresh is None:
+            if self.best_thresh is None:
+                thresh = 0.5
+            else:
+                thresh = self.best_thresh
         y_prob = self.predict_proba(X)[:, 1]
         y_pred = (y_prob >= thresh).astype(int)
         fp = 0
@@ -271,14 +274,23 @@ if __name__ == '__main__':
                             reg_alpha=[0, 1e-5, 0.001, 0.005, 0.01, 0.05,
                                         0.1, 1, 10, 100],
                             scale_pos_weight=[0, 0.5, 1, 2, 3],
-                            objective=['binary:logistic', 'reg:linear',
-                                       'multi:softprob'])
+                            objective=['binary:logistic', 'reg:squarederror',
+                                       'multi:softprob'],
+                            learning_rate=[0, 0.0001, 0.001, 0.01, 0.1],
+                            num_estimators=[10, 50, 100, 500])
     print(GB.hyper_search(distributions_gb, X_train, y_train))
+    # With all samples
     # ({'subsample': 0.6, 'scale_pos_weight': 1, 'reg_lambda': 0.005,
     # 'reg_alpha': 0.01, 'objective': 'reg:linear', 'min_child_weight': 5,
     # 'max_depth': 5, 'gamma': 0, 'eta': 0.075, 'colsample_by_tree': 1},
     # F1 Score: 0.7961882282491608)
     '''
+    # With under sampling
+    # ({'subsample': 0.7, 'scale_pos_weight': 2, 'reg_lambda': 0,
+    # 'reg_alpha': 0.005, 'objective': 'binary:logistic',
+    # 'min_child_weight': 1.5, 'max_depth': 4, 'gamma': 0, 'eta': 0.125}
+    # F1 Score: 0.87008547008547)
+({'subsample': 0.9, 'scale_pos_weight': 2, 'reg_lambda': 0.001, 'reg_alpha': 0.01, 'objective': 'binary:logistic', 'num_estimators': 100, 'min_child_weight': 1.5, 'max_depth': 8, 'learning_rate': 0.1, 'gamma': 0.01, 'eta': 0.225}, 0.8770357179052832)
     grad_boost = XGBClassifier(learning_rate =0.01,
                                n_estimators=551,
                                max_depth=6,

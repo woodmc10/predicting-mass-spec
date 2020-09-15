@@ -14,7 +14,7 @@ from statsmodels.stats.outliers_influence import variance_inflation_factor
 from data_class import Data, create_data
 from model_class import Model
 from plots import (feature_comparison, plot_learning_curve, confusion_plot,
-                   profit_curve)
+                   profit_curve, stack_profit_curves)
 from xgboost import XGBClassifier
 from collections import defaultdict
 
@@ -154,28 +154,30 @@ if __name__ == '__main__':
     xgb = XGBClassifier()
     grad_boost = XGBClassifier(learning_rate =0.01,
                                n_estimators=551,
-                               max_depth=6,
-                               min_child_weight=0,
-                               gamma=0.275,
-                               subsample=0.6,
+                               max_depth=4,
+                               min_child_weight=1.5,
+                               gamma=0,
+                               subsample=0.7,
                                colsample_bytree=0.5,
                                objective= 'binary:logistic',
                                nthread=4,
-                               scale_pos_weight=1,
-                               reg_alpha=0.2,
+                               scale_pos_weight=2,
+                               reg_lambda=0,
+                               reg_alpha=0.005,
+                               eta=0.125,
                                seed=27)
-    
+
     # Compare best models
     mod_list = [(lr, 'Logistic Regression', 'blue'),
                 (rf, 'Random Forest', 'orange'),
                 (xgb, 'XGBoost Classifier', 'purple'),
                 (grad_boost, 'XG Boost', 'purple')]
     scores, model_list, mod_class_list = compare_models(
-        mod_list[:-4:-2], f1_score, X_train, X_test, y_train, y_test,
+        mod_list, f1_score, X_train, X_test, y_train, y_test,
         fig_name='../images/boost_rand_comp.png', save=False
     )
     print(scores)
-
+    '''
     # plot feature importance and coefs
     # log_reg = model_list[0][0]
     # log_tup = ('green', 'Logistic Regression', 'Coefficient Value')
@@ -191,10 +193,11 @@ if __name__ == '__main__':
     feature_comparison(columns, features1, features2, labels,
                        fig_name='../images/boost_rand_features.png',
                        save=False)
-
+    '''
     # Evaluate XGBoost model
     # Confusion Matrix (Bar Chart)
     mod_boost = mod_class_list[0]
+    '''
     tp, fp, fn, tn = mod_boost.confusion_matrix(X_test, y_test.values)
     confusion_plot(tp, fp, fn, tn, fig_name = '../images/conf.png', save=False)
     print(tp, fp, fn, tn)
@@ -211,44 +214,29 @@ if __name__ == '__main__':
                                              mod_boost)
 
     # Profit Curve
-    cost_matrix = (0, 0, -1, 0.5)
+    
     fig, ax = plt.subplots(1)
     profit_curve(mod_boost, X_test, y_test, cost_matrix, ax=ax, label='XGBoost',
                  fig_name='../images/profit.png', save=False)
     plt.show()
 
-
+    '''
     # Evaluate sampling
     sampling_methods = [all_df.under_sampling(all_df.train_df),
                         all_df.over_sampling(all_df.train_df),
                         all_df.smote_sampling(all_df.train_df),
-                        (X_train, y_train)]
-    fig, ax = plt.subplots(1)
+                        all_df.pop_reported(all_df.train_df)]
     label_sampling = ['Under', 'Over', 'SMOTE', 'None']
-    counter = 0
-    for X_train, y_train in sampling_methods:
-        # scores, model_list, mod_class_list = compare_models(
-        #     mod_list[:-4:-2], f1_score, X_train, X_test, y_train, y_test,
-        #     fig_name='../images/boost_rand_comp.png', save=False
-        # )
-        # print(scores)
-        mod_boost.fit(X_train, y_train)
-        ax = profit_curve(mod_boost, X_test, y_test, cost_matrix, ax=ax,
-                          label=label_sampling[counter],
-                          fig_name='test.png', save=False)
-        print(mod_boost.confusion_matrix(X_test, y_test.values))
-        counter += 1
-    plt.show()
-    # sampling_methods = [all_df.under_sampling(all_df.full_df),
-    #                     all_df.over_sampling(all_df.full_df),
-    #                     all_df.smote_sampling(all_df.full_df)]
-    # for X, y in sampling_methods:
-    #     plot_learning_curve(model_list[0][0], 'Learning Curve', X, y)
-    #     plt.show()
+    label_models = ['Logistic', 'Random Forest', 'XGBoost', 'Tuned XGBoost']
+    cost_matrix = (0, 0, -1, 0.5)
+    stack_profit_curves(mod_class_list, sampling_methods, mod_class_list[3],
+                        label_models, label_sampling, X_test, y_test,
+                        cost_matrix)
+   
 
-    X, y = all_df.under_sampling(all_df.full_df)
-    plot_learning_curve(boosted_forest, 'Learning Curve', X, y, axes=None,
-                        ylim=None, cv=10, n_jobs=-1,
-                        train_sizes=np.linspace(.1, 1.0, 10))
-    plt.show()
-    plt.savefig('../images/learning.png')
+    # X, y = all_df.under_sampling(all_df.full_df)
+    # plot_learning_curve(boosted_forest, 'Learning Curve', X, y, axes=None,
+    #                     ylim=None, cv=10, n_jobs=-1,
+    #                     train_sizes=np.linspace(.1, 1.0, 10))
+    # plt.show()
+    # plt.savefig('../images/learning.png')
