@@ -109,10 +109,10 @@ def plot_mnist_embedding(ax, X, y, tight=False, title=None):
     ax.patch.set_visible(False)
     for i in range(X.shape[0]):
         ax.text(X[i, 0], X[i, 1],
-                 y_map[i],
-                 color=y_c_map[i],
-                 fontdict={'weight': 'bold', 'size': 12},
-                 alpha=0.3)
+                y_map[i],
+                color=y_c_map[i],
+                fontdict={'weight': 'bold', 'size': 12},
+                alpha=0.3)
     ax.set_xlabel('Principal Component 1')
     ax.set_ylabel('Principal Component 2')
     ax.set_title('Principal Component Analysis', fontsize=16)
@@ -256,7 +256,7 @@ def lasso_plot(data, pairs, save=False):
         coefs.append(mod.log_coef_())
     coefs = np.array(coefs).T
     labels = data.full_df.drop('reported', axis=1).columns
-    
+
     # Get colors for plotting
     counter = 0
     cmap = plt.cm.get_cmap('tab20')
@@ -425,16 +425,16 @@ def feature_comparison(columns, coefs, features, label_values,
     axes[0].legend()
     handles, labels = axes[0].get_legend_handles_labels()
     order1 = [1, 0]
-    
+
     # Add label to split out positive and negative coefficients
     if title1 == 'Logistic Regression':
         order2 = [3, 2]
         axes[0].legend([handles[idx] for idx in order2],
-                    [labels[idx] for idx in order2],
-                    loc='lower right', title='Positive Coefficients',
-                    bbox_to_anchor=(1, 0.2))
+                       [labels[idx] for idx in order2],
+                       loc='lower right', title='Positive Coefficients',
+                       bbox_to_anchor=(1, 0.2))
         legend_title = 'Negative Coefficients'
-    
+
     l1 = axes[0].legend([handles[idx] for idx in order1],
                         [labels[idx] for idx in order1],
                         loc='lower right', title=legend_title)
@@ -448,7 +448,8 @@ def feature_comparison(columns, coefs, features, label_values,
     axes[1].set_title(title2, fontsize=16)
     handles, labels = plt.gca().get_legend_handles_labels()
     order = [1, 0]
-    plt.legend([handles[idx] for idx in order],[labels[idx] for idx in order],
+    plt.legend([handles[idx] for idx in order],
+               [labels[idx] for idx in order],
                loc='lower right')
     plt.tight_layout()
     if save:
@@ -591,15 +592,15 @@ def confusion_plot(tp, fp, fn, tn, fig_name='plot.png', save=False):
     '''
     fig, axes = plt.subplots(1, 2)
     axes[0].bar([1, 2], [fp, tn], color=['r', 'r'], alpha=0.5, width=0.4,
-            align='edge', label='Not Reported')
+                align='edge', label='Not Reported')
     axes[0].bar([1, 2], [tp, fn], color=['g', 'g'], alpha=0.5, width=-0.4,
-            align='edge', label='Reported')
+                align='edge', label='Reported')
     axes[0].legend(title='Actual Outcome')
     axes[0].set_title('All Classifications')
     axes[1].bar([1, 2], [fp, 0], color=['r', 'r'], alpha=0.5, width=0.4,
-            align='center')
+                align='center')
     axes[1].bar([1, 2], [0, fn], color=['g', 'g'], alpha=0.5, width=-0.4,
-            align='center')
+                align='center')
     axes[1].set_title('Incorrect Classifications')
     axes[1].yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
     for ax in axes:
@@ -625,8 +626,8 @@ def profit_curve(model, X_test, y_test, cost_matrix, ax, label, color=None,
         array of features
     y_test: numpy array
         array of targest
-    cost_matrix: 
-        cost benefit matrix 
+    cost_matrix:
+        cost benefit matrix
         order: fp, tp, fn, tn
     ax: matplotlib ax
         ax to plot curve
@@ -660,6 +661,7 @@ def profit_curve(model, X_test, y_test, cost_matrix, ax, label, color=None,
     ax.set_ylabel('Profit per Sample')
     ax.legend()
     return ax
+
 
 def stack_profit_curves(model_list, sample_list, mod, label_model_list,
                         label_sample_list, X_test, y_test, cost_matrix,
@@ -695,13 +697,13 @@ def stack_profit_curves(model_list, sample_list, mod, label_model_list,
     counter = 0
     for index, mod in enumerate(model_list):
         axes[0] = profit_curve(mod, X_test, y_test, cost_matrix, ax=axes[0],
-                          label=label_model_list[index],
-                          color=color_list[index])
+                               label=label_model_list[index],
+                               color=color_list[index])
     axes[0].set_title('Model Comparison (no minority sampling)')
     for X_train, y_train in sample_list:
         mod.fit(X_train, y_train)
         axes[1] = profit_curve(mod, X_test, y_test, cost_matrix, ax=axes[1],
-                          label=label_sample_list[counter])
+                               label=label_sample_list[counter])
         counter += 1
     axes[1].set_title('Sampling Comparison (Tuned XGBoost)')
     X_train, y_train = sample_list[3]
@@ -710,6 +712,7 @@ def stack_profit_curves(model_list, sample_list, mod, label_model_list,
         plt.savefig(fig_name)
     else:
         plt.show()
+
 
 if __name__ == '__main__':
 

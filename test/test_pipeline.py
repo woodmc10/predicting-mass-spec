@@ -1,9 +1,9 @@
 import unittest
 import pandas as pd
-import sys
-sys.path.append('./src')
 import data_pipeline
 import great_expectations as ge
+import sys
+sys.path.append('./src')
 
 
 class TestPipeline(unittest.TestCase):
@@ -66,15 +66,15 @@ class TestPipeline(unittest.TestCase):
         remove_list = ['Too ', 'Not ', ' Enough', 'Very ', 'Just ']
         spinosad_list = ['Odd']
         self.assertCountEqual(
-            data_pipeline.clean_names(df, remove_list, spinosad_list)
+            data_pipeline.clean_sample_names(df)
             ['sample_name'].unique(), ['20090501-10']
         )
         self.assertEqual(
-            data_pipeline.clean_names(df, remove_list, spinosad_list).shape,
+            data_pipeline.clean_analyte_names(df, remove_list, spinosad_list).shape,
             (4, 4)
         )
         self.assertCountEqual(
-            data_pipeline.clean_names(df, remove_list, spinosad_list)
+            data_pipeline.clean_analyte_names(df, remove_list, spinosad_list)
             ['analyte'].unique(), ['Clever', 'Spinosad']
         )
 

@@ -216,7 +216,7 @@ class Model(object):
         for index, pred in enumerate(y_pred):
             if pred == 1:
                 if y[index] == 1:
-                    tp +=1
+                    tp += 1
                 else:
                     fp += 1
             else:
@@ -263,7 +263,7 @@ if __name__ == '__main__':
     grad_boost = XGBClassifier(random_state=43)
     GB = Model(grad_boost, f1_score)
     distributions_gb = dict(eta=[0.01, 0.025, 0.05, 0.075, 0.1, 0.125,
-                                   0.15, 0.175, 0.2, 0.225, 0.25, 0.275, 0.3],
+                                 0.15, 0.175, 0.2, 0.225, 0.25, 0.275, 0.3],
                             min_child_weight=[0.5, 1, 1.5, 2, 3, 5],
                             max_depth=[3, 4, 5, 6, 7, 8, 9, 10],
                             gamma=[0, 0.005, 0.01, 0.015, 0.02],
@@ -272,7 +272,7 @@ if __name__ == '__main__':
                             reg_lambda=[0, 1e-5, 0.001, 0.005, 0.01, 0.05,
                                         0.1, 1, 10, 100],
                             reg_alpha=[0, 1e-5, 0.001, 0.005, 0.01, 0.05,
-                                        0.1, 1, 10, 100],
+                                       0.1, 1, 10, 100],
                             scale_pos_weight=[0, 0.5, 1, 2, 3],
                             objective=['binary:logistic', 'reg:squarederror',
                                        'multi:softprob'],
@@ -290,7 +290,7 @@ if __name__ == '__main__':
     # 'reg_alpha': 0.005, 'objective': 'binary:logistic',
     # 'min_child_weight': 1.5, 'max_depth': 4, 'gamma': 0, 'eta': 0.125}
     # F1 Score: 0.87008547008547)
-({'subsample': 0.9, 'scale_pos_weight': 2, 'reg_lambda': 0.001, 'reg_alpha': 0.01, 'objective': 'binary:logistic', 'num_estimators': 100, 'min_child_weight': 1.5, 'max_depth': 8, 'learning_rate': 0.1, 'gamma': 0.01, 'eta': 0.225}, 0.8770357179052832)
+
     grad_boost = XGBClassifier(learning_rate =0.01,
                                n_estimators=551,
                                max_depth=6,

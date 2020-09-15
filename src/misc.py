@@ -17,6 +17,7 @@ from plots import (feature_comparison, plot_learning_curve, confusion_plot,
                    profit_curve, stack_profit_curves)
 from xgboost import XGBClassifier
 from collections import defaultdict
+import pickle
 
 
 def variance_factor(df):
@@ -76,7 +77,7 @@ def compare_models(model_list, metric, X_train, X_test, y_train, y_test,
         mod.fit(X_train, y_train)
         axes[0] = mod.roc_plot(X_test, y_test, axes[0], model[2], model[1])
         axes[1], thresh = mod.thresh_plot(X_test, y_test,
-                                            axes[1], model[2], model[1])
+                                          axes[1], model[2], model[1])
         result = mod.score_metric(X_test, y_test, thresh)
         metric_result.append((model[1], result.round(2)))
 
@@ -138,6 +139,12 @@ def incorrect_classifications(X_test, y_test, model,
     fn_df = sample_df[sample_df.index.isin(fn_index)]
     return fp_df, fn_df
 
+
+def pickle_model(model, filename):
+    with open(filename, 'wb') as f:
+        pickle.dump(model, f)
+
+
 if __name__ == '__main__':
     all_df = create_data('../data/merged_df_test.csv', 'All')
 
@@ -152,14 +159,14 @@ if __name__ == '__main__':
                             solver='saga', max_iter=100000)
     rf = RandomForestClassifier(class_weight='balanced_subsample')
     xgb = XGBClassifier()
-    grad_boost = XGBClassifier(learning_rate =0.01,
+    grad_boost = XGBClassifier(learning_rate=0.01,
                                n_estimators=551,
                                max_depth=4,
                                min_child_weight=1.5,
                                gamma=0,
                                subsample=0.7,
                                colsample_bytree=0.5,
-                               objective= 'binary:logistic',
+                               objective='binary:logistic',
                                nthread=4,
                                scale_pos_weight=2,
                                reg_lambda=0,
@@ -177,6 +184,9 @@ if __name__ == '__main__':
         fig_name='../images/boost_rand_comp.png', save=False
     )
     print(scores)
+
+    # Pickle XGBoost model
+    pickle_model(mod_class_list[2].model, 'random.pkl')
     '''
     # plot feature importance and coefs
     # log_reg = model_list[0][0]
@@ -193,7 +203,7 @@ if __name__ == '__main__':
     feature_comparison(columns, features1, features2, labels,
                        fig_name='../images/boost_rand_features.png',
                        save=False)
-    '''
+
     # Evaluate XGBoost model
     # Confusion Matrix (Bar Chart)
     mod_boost = mod_class_list[2]
@@ -203,20 +213,14 @@ if __name__ == '__main__':
                    save=False)
     print(tp, fp, fn, tn)
 
-    # Learning Curve
-    # plot_learning_curve(grad_boost, 'Learning Curve', X, y, axes=None,
-    #                     ylim=None, cv=10, n_jobs=-1,
-    #                     train_sizes=np.linspace(.1, 1.0, 50))
-    # plt.savefig('../images/learning.png')
-
     # List of incorrectly classified chromatograms
     fp_df, fn_df = incorrect_classifications(X_test, y_test,
                                              mod_boost)
 
     # Profit Curves
     fig, ax = plt.subplots(1)
-    profit_curve(mod_boost, X_test, y_test, cost_matrix, ax=ax, label='XGBoost',
-                 fig_name='../images/profit.png', save=False)
+    profit_curve(mod_boost, X_test, y_test, cost_matrix, ax=ax,
+                 label='XGBoost', fig_name='../images/profit.png', save=False)
 
     sampling_methods = [all_df.under_sampling(all_df.train_df),
                         all_df.over_sampling(all_df.train_df),
@@ -229,10 +233,11 @@ if __name__ == '__main__':
                         label_models, label_sampling, X_test, y_test,
                         cost_matrix, model_colors,
                         fig_name='../images/profit_curve', save=True)
-   
+
 
     # X, y = all_df.under_sampling(all_df.full_df)
     # plot_learning_curve(mod_boost.model, 'Learning Curve', X, y, axes=None,
     #                     ylim=None, cv=10, n_jobs=-1,
     #                     train_sizes=np.linspace(.1, 1.0, 10))
     # plt.savefig('../images/learning.png')
+    '''

@@ -4,7 +4,6 @@ from imblearn.over_sampling import RandomOverSampler, SMOTE
 from imblearn.under_sampling import RandomUnderSampler
 
 
-
 class Data(object):
     '''Class to contain the different dataframes that will be created
     after calling the data pipeline. Four total dataframes, analytes one
@@ -24,7 +23,7 @@ class Data(object):
         self.analytes = analytes
         self.columns = columns
         self.full_df = pd.read_csv(file, index_col='Unnamed: 0')
-    
+
     def filter_cols(self, filter_type=None):
         '''Filter train_df and test_df to include only columns of interest
         Parameters
@@ -45,7 +44,7 @@ class Data(object):
             print('Warning: incorrect filter_type passed to filter_cols')
             filtered_df = None
         return filtered_df
-    
+
     def train_test_split(self, test_size=0.33, filter_type=None):
         '''Train test split the df for testing
         Parameters
@@ -64,16 +63,16 @@ class Data(object):
                                 left_index=True, right_index=True)
         self.train_df = pd.merge(X_train, y_train, how='left',
                                  left_index=True, right_index=True)
-    
+
     def over_sampling(self, df):
-        '''Over sample the positive class 
+        '''Over sample the positive class
         Parameters
         ----------
         df: pandas DataFrame
             dataframe of samples for over sampling
         Return
         ------
-        X_ros: 
+        X_ros:
             random over sampling of the features
         y_ros:
             random over sampling of the targets
@@ -84,14 +83,14 @@ class Data(object):
         return X_ros, y_ros
 
     def under_sampling(self, df):
-        '''Under sample the positive class 
+        '''Under sample the positive class
         Parameters
         ----------
         df: pandas DataFrame
             dataframe of samples for over sampling
         Return
         ------
-        X_rus: 
+        X_rus:
             random under sampling of the features
         y_rus:
             random under sampling of the targets
@@ -102,14 +101,14 @@ class Data(object):
         return X_rus, y_rus
 
     def smote_sampling(self, df):
-        '''SMOTE over sample the positive class 
+        '''SMOTE over sample the positive class
         Parameters
         ----------
         df: pandas DataFrame
             dataframe of samples for over sampling
         Return
         ------
-        X_smote: 
+        X_smote:
             SMOTE over sampling of the features
         y_smote:
             SMOTE over sampling of the targets

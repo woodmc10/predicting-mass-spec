@@ -25,6 +25,7 @@ def create_model(optimizer='Adagrad', init_mode='zero', activation1='softsign',
                      metrics=[Recall()])
     return nn_model
 
+
 def f1_eval(y_pred, dtrain):
     # Calculate f1_score for neural net tuning
     y_true = dtrain.get_label()
@@ -83,7 +84,6 @@ if __name__ == '__main__':
     # Change to over sampling and repeat
     X_train, y_train = all_df.over_sampling(all_df.train_df)
 
-
     print(NN.hyper_search(distributions_nn, X_train, y_train))
     # ({'init_mode': 'glorot_uniform', 'batch_size': 100,
     # 'optimizer': 'Adamax', 'dropout_rate': 0.5, 'weight_constraint': 2,
@@ -94,4 +94,3 @@ if __name__ == '__main__':
     # 'weight_constraint': 3, 'neurons1': 15, 'optimizer': 'Adagrad',
     # 'batch_size': 100, 'epochs': 50, 'neurons2': 50,
     # 'activation2': 'softsign'}, 0.655386722306166)
-    

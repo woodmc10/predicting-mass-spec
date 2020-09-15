@@ -37,9 +37,10 @@ def create_reported_df(path=r'../data', pos_file='../data/pest_pos.xlsx'):
     full_df = merge(path, columns)
 
     # Update analyte names from instrument to match analyte names from reports
+    sample_df = clean_sample_names(full_df)
     remove_list = ['-B1a', '-B1b', ' NH4 Adduct', 'cis-', 'trans-']
     spinosad_list = ['Spinosyn A', 'Spinosyn D']
-    clean_df = clean_names(full_df, remove_list, spinosad_list)
+    clean_df = clean_analyte_names(sample_df, remove_list, spinosad_list)
 
     # Create dataframe from positive reports xlsx
     pos_df = pd.read_excel(pos_file)
@@ -78,7 +79,6 @@ def analyte_filter(df, analyte='All'):
         filtered_df = df[df['analyte'] == analyte]
         one_hot_df = pd.get_dummies(filtered_df, columns=['analyte'])
     return one_hot_df
-        
 
 
 def timer(func):
@@ -166,7 +166,7 @@ def line_num_for_phrase_in_file(phrase='Sample Name', filename='file.txt'):
     ------
     line containing the phrase
     '''
-    with open(filename,'r') as f:
+    with open(filename, 'r') as f:
         for (i, line) in enumerate(f):
             if phrase in line:
                 return i - 1
@@ -193,13 +193,31 @@ def reduce_df(dfs, cols):
         df_cols = df[cols]
         df_rrt = df_cols[df_cols['Relative Retention Time'] != 0]
         df_rows_dropped = df_rrt[df_rrt['Analyte Retention Time (min)'] != 0]
-        sample_df = df_rows_dropped[df_rows_dropped['Sample Type'] == 'Unknown']
+        sample_df = df_rows_dropped[df_rows_dropped['Sample Type']
+                                    == 'Unknown']
         df_list.append(sample_df)
     return df_list
 
 
-def clean_names(df, remove_list, spinosad_list):
-    ''' Adjust sample and analyte name to match reported list from lab
+def clean_sample_names(df):
+    '''Adjust sample names to match reported list and drop names that
+    do not fit the sample name format
+    Parameters
+    ----------
+    df: DataFrame
+        merged datafram of all samples
+    Return
+    ------
+    df: DataFrame
+        dataframe with sample names cleaned
+    '''
+    df['sample_name'] = df['Sample Name'].str.extract(r'(\d{8}-\d{2})')
+    df.dropna(subset=['sample_name'], inplace=True)
+    return df
+
+
+def clean_analyte_names(df, remove_list, spinosad_list):
+    ''' Adjust analyte name to match reported list from lab
     Parameters
     ----------
     df: DataFrame
@@ -209,14 +227,11 @@ def clean_names(df, remove_list, spinosad_list):
     spinosad_list: list
         list of strings to replace with 'Spinosad'
         necessary be Spinosad is composed of Spinosyn A and Spinosyn D
-
     Return
     ------
     df: DataFrame
         dataframe with corrected names
     '''
-    df['sample_name'] = df['Sample Name'].str.extract(r'(\d{8}-\d{2})')
-    df.dropna(subset=['sample_name'], inplace=True)
     df['analyte'] = df['Analyte Peak Name'].str[:-2]
     for elem in remove_list:
         df['analyte'] = df['analyte'].str.replace(elem, '')
