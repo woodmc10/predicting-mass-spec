@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="../../favicon.ico">
+
+    <title>Batch Predictions</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="../static/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <link href="../static/css/ie10-viewport-bug-workaround.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="../static/css/starter-template.css" rel="stylesheet">
+    <link href="../static/css/grid.css" rel="stylesheet">
+    <link href="../static/css/theme.css" rel="stylesheet">
+
+    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+    <script src="../static/js/ie-emulation-modes-warning.js"></script>
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+
+  <body>
+    <style>
+      [data-stat="confirmed"]{
+          background-color: #b6f0b7;
+      }
+      [data-stat="unconfirmed"]{
+          background-color: #e6a9a9;
+      }
+      @media (min-width: 768px) {
+        .is-table-row {
+          display: table;
+        }
+        .is-table-row [class*="col-"] {
+          float: none;
+          display: table-cell;
+          vertical-align: top;
+        }
+        .is-table-row-sm {
+          display: flex;
+          /* width: 100%; */
+        }
+        .is-table-row-sm [class*="col-"] {
+          float: none;
+          display: table-cell;
+          vertical-align: top;
+        }
+      }
+    </style>
+
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">Pesticides Analysis</a>
+        </div>
+        <div id="navbar" class="collapse navbar-collapse">
+          <ul class="nav navbar-nav">
+            <li class="active"><a href="#">Home</a></li>
+            <li><a href="/batch_predict">Batch</a></li>
+            <li><a href="#contact">Contact</a></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+
+    <div class="container">
+
+      <div class="starter-template">
+        <h1>Batch Predictions from Model</h1>
+        <h3>Evaluate Batch</h3>
+        <form action = "/batch_predict" method = "POST"
+          enctype = "multipart/form-data">
+          <input type = "file" name = "file"/>
+          <input type = "submit"/>
+        </form>
+      
+        <div class="row is-table-row">
+          <div class="col-md-8">
+            <h3>Batch Performance</h3>
+            <div class="row is-table-row-sm">
+              {% if controls_df.shape[0] > 0 %}
+              <div class="col-md-6" data-stat="unconfirmed">
+              {% else %}
+              <div class="col-md-6" data-stat="confirmed">
+              {% endif %}
+                <h4>Controls</h4>
+                <p>Incorrect: {{controls_df.shape[0]}}</p>
+                <table class="table table-condensed">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Sample</th>
+                      <th>Analyte</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for index, row in controls_df.iterrows() %}
+                    <tr>
+                      <td class="text-left">{{index}}</td>
+                      <td class="text-left">{{row['Sample Name']}}</td>
+                      <td class="text-left">{{row['Analyte Peak Name']}}</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              {% if blanks_df.shape[0] > 0 %}
+              <div class="col-md-6" data-stat="unconfirmed">
+              {% else %}
+              <div class="col-md-6" data-stat="confirmed">
+              {% endif %}
+                <h4>Blanks</h4>
+                <p>Incorrect: {{blanks_df.shape[0]}}</p>
+                <table class="table table-condensed">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Sample</th>
+                      <th>Analyte</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for index, row in blanks_df.iterrows() %}
+                    <tr>
+                      <td class="text-left">{{index}}</td>
+                      <td class="text-left">{{row['Sample Name']}}</td>
+                      <td class="text-left">{{row['Analyte Peak Name']}}</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="row">
+              <div class="page-header">
+                <h3>Chromatograms Requiring Visual Inspection</hs>
+              </div>
+              <table class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Sample Name</th>
+                    <th>Analyte Name</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for index, row in sample_df.iterrows() %}
+                  <tr>
+                    <td class="text-left">{{index}}</td>
+                    <td class="text-left">{{row['Sample Name']}}</td>
+                    <td class="text-left">{{row['Analyte Peak Name']}}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <h3>Model Performance</h3>
+            <h4>Business Metrics</h4>
+            <div class="row">
+              <img src="/static/images/profit_curve.png" class="img-thumbnail" alt="Profit curve: profit per sample vs threshold">
+            </div>
+            <h4>Data Metrics</h4>
+            <div class="row">
+              <img src="/static/images/learning.png" class="img-thumbnail" alt="Learning curve comparining training performance and test peformance for increasing number of data points">
+            </div>
+            <div class="row">
+              <img src="/static/images/bar_confusion.png" class="img-thumbnail" alt="Bar chart of classifications">
+            </div>
+              <div class="row">
+              <img src="/static/images/boost_rand_comp.png" class="img-thumbnail" alt="F1 score plotted agains threshold">
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /.container -->
+
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script>window.jQuery || document.write('<script src="../static/js/vendor/jquery.min.js"><\/script>')</script>
+    <script src="../static/js/bootstrap.min.js"></script>
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <script src="../static/js/ie10-viewport-bug-workaround.js"></script>
+  </body>
+</html>

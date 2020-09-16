@@ -3,6 +3,7 @@ from werkzeug.utils import secure_filename
 import numpy as np
 import pandas as pd
 import pickle
+import copy
 import sys
 sys.path.append('../src')
 from data_pipeline import (files_to_dfs, clean_analyte_names,
@@ -11,7 +12,7 @@ from data_class import Data
 
 app = Flask(__name__)
 
-def predict_single_batch(file):
+def predict_single_batch(file_):
     columns = ['Sample Name', 'Sample Type', 'Analyte Peak Name',
                'Analyte Peak Area (counts)', 'Analyte Peak Height (cps)',
                'Analyte Retention Time (min)', 'Analyte Expected RT (min)',
@@ -25,7 +26,7 @@ def predict_single_batch(file):
 
     # Create df for model
     # Read file to df
-    df = read_file(file)
+    df = read_file([file_])[0]
     cols_df = df[columns]
 
     # adjust names to match model
@@ -42,7 +43,7 @@ def predict_single_batch(file):
     return df, mod_df
 
 
-def read_file(file_):
+def read_file(files):
     '''
     Read a single file into a pandas dataframe
     Parameters
@@ -54,12 +55,24 @@ def read_file(file_):
     df_sub: DataFrame
         dataframe containing only sample information
     '''
-    start_row = line_num_for_phrase_in_file('Sample Name', file_)
-    if start_row >= 0:
-        df_sub = pd.read_csv(file_, delimiter='\t', skiprows=start_row)
-    else:
-        print(f'😱{file_} does not contain "Sample Name", check the file.')
-    return df_sub
+    df_list = []
+    for file_ in files:
+        try:
+            df = pd.read_csv(file_, skip_blank_lines=False)
+            start_row = df[df.iloc[:, 0].str.startswith('Sample Name',
+                                                        na=False)].index[0]
+            columns = df.iloc[start_row]['Peak Name: Myclobutanil d4'].split('\t')
+            df_sub = pd.DataFrame(
+                [x.split('\t') for x in 
+                 df.iloc[start_row+1:]['Peak Name: Myclobutanil d4']],
+                columns=columns
+            )
+            df_sub = convert_from_str(df_sub)
+            # df_sub = pd.read_csv(file_, delimiter='\t', skiprows=start_row)
+            df_list.append(df_sub)
+        except:
+            print(f'😱{file_} does not contain "Sample Name", check the file.')
+    return df_list
 
 
 def line_num_for_phrase_in_file(phrase='Sample Name', filename='file.txt'):
@@ -74,10 +87,10 @@ def line_num_for_phrase_in_file(phrase='Sample Name', filename='file.txt'):
     ------
     line containing the phrase
     '''
-    f = filename.readlines()
-    for (i, line) in enumerate(f):
-        if phrase in line:
-            return i - 1
+    with open(filename, 'r') as f:
+        for (i, line) in enumerate(f):
+            if phrase in line:
+                return i - 1
     return -1
 
 
@@ -127,12 +140,25 @@ def evaluate_samples(df):
     return sample_df
 
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
+def convert_from_str(df):
+    columns = ['Analyte Peak Area (counts)', 'Analyte Peak Height (cps)',
+               'Analyte Retention Time (min)', 'Analyte Expected RT (min)',
+               'Analyte Centroid Location (min)', 'Analyte Start Scan',
+               'Analyte Start Time (min)', 'Analyte Stop Scan',
+               'Analyte Stop Time (min)', 'Analyte Peak Width (min)',
+               'Analyte Peak Width at 50% Height (min)',
+               'Analyte Peak Asymmetry',
+               'Analyte Integration Quality', 'Relative Retention Time']
+    for col in columns:
+        df[col] = pd.to_numeric(df[col])
+    return df
+
+
+@app.route('/batch_predict', methods=['GET', 'POST'])
+def batch_predict():
     if request.method == 'POST':
-        f = request.files.get('file')
+        f = request.files['file']
         file = '../data/20200615 ws 8442.txt'
-        breakpoint()
         df, mod_df = predict_single_batch(f)
         predicted_df = evaluate_batch(df, mod_df, model)
         controls_df, blanks_df = evaluate_controls(predicted_df)
@@ -141,16 +167,13 @@ def index():
         controls_df = pd.DataFrame()
         blanks_df = pd.DataFrame()
         sample_df = pd.DataFrame()
-    return render_template('index.html', controls_df=controls_df,
+    return render_template('batch_predict.html', controls_df=controls_df,
                            blanks_df=blanks_df, sample_df=sample_df)
 
 
-@app.route('/uploader', methods = ['GET', 'POST'])
-def upload_file():
-   if request.method == 'POST':
-      f = request.files['file']
-      f.save(secure_filename(f.filename))
-      return 'file uploaded successfully'
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    return render_template('index.html')
 
 if __name__ == '__main__':
     # Load model
