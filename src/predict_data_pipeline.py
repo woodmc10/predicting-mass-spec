@@ -45,7 +45,7 @@ if __name__ == '__main__':
     mod_df = fill_df._get_numeric_data()
 
     # Create model
-    with open('boosted.pkl', 'rb') as f:
+    with open('random.pkl', 'rb') as f:
         model = pickle.load(f)
 
     # Predict probabilities
@@ -79,4 +79,6 @@ if __name__ == '__main__':
     # Samples for evaluation
     df['evaluate'] = np.where(df['Sample Type'] == 'Unknown',
                               np.where(df['predict'] == 1, 1, 0), 0)
-    print(df[df['evaluate'] == 1][['Sample Name', 'Analyte Peak Name']])
+    samples = df[df['evaluate'] == 1][['Sample Name', 'Analyte Peak Name']]
+    for index, row in samples.iterrows():
+        print(row)
