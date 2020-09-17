@@ -544,19 +544,19 @@ def plot_learning_curve(estimator, title, X, y, axes=None, ylim=None, cv=None,
         (default: np.linspace(0.1, 1.0, 5))
     """
     if axes is None:
-        _, axes = plt.subplots(1, 1, figsize=(20, 5))
+        _, axes = plt.subplots(1, 1, figsize=(14, 5))
 
     axes.set_title(title)
     if ylim is not None:
         axes.set_ylim(*ylim)
     axes.set_xlabel("Training examples")
-    axes.set_ylabel("Score")
+    axes.set_ylabel("F1 Score")
 
-    scorer = make_scorer(accuracy_score)
+    scorer = make_scorer(f1_score)
     train_sizes, train_scores, test_scores = \
         learning_curve(estimator, X, y, cv=cv, n_jobs=n_jobs,
                        train_sizes=train_sizes, scoring=scorer,
-                       return_times=False)
+                       return_times=False, shuffle=True)
     train_scores_mean = np.mean(train_scores, axis=1)
     train_scores_std = np.std(train_scores, axis=1)
     test_scores_mean = np.mean(test_scores, axis=1)
@@ -571,9 +571,9 @@ def plot_learning_curve(estimator, title, X, y, axes=None, ylim=None, cv=None,
                       test_scores_mean + test_scores_std, alpha=0.1,
                       color="g")
     axes.plot(train_sizes, train_scores_mean, 'o-', color="r",
-              label="Training score")
+              label="Training F1 score")
     axes.plot(train_sizes, test_scores_mean, 'o-', color="g",
-              label="Cross-validation score")
+              label="Cross-validation F1 score")
     axes.legend(loc="best")
 
 
@@ -590,29 +590,41 @@ def confusion_plot(tp, fp, fn, tn, fig_name='plot.png', save=False):
     save: bool
         if true save the plot, if false show the plot
     '''
-    fig, axes = plt.subplots(1, 2)
-    axes[0].bar([1, 2], [fp, tn], color=['r', 'r'], alpha=0.5, width=0.4,
-                align='edge', label='Not Reported')
-    axes[0].bar([1, 2], [tp, fn], color=['g', 'g'], alpha=0.5, width=-0.4,
-                align='edge', label='Reported')
-    axes[0].legend(title='Actual Outcome')
-    axes[0].set_title('All Classifications')
-    axes[1].bar([1, 2], [fp, 0], color=['r', 'r'], alpha=0.5, width=0.4,
-                align='center')
-    axes[1].bar([1, 2], [0, fn], color=['g', 'g'], alpha=0.5, width=-0.4,
-                align='center')
-    axes[1].set_title('Incorrect Classifications')
-    axes[1].yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
-    for ax in axes:
-        ax.set_xlabel('Predicted Results')
-        ax.set_ylabel('Samples')
-        ax.set_xticks([1, 2])
-        ax.set_xticklabels(['Reported', 'Not Reported'])
+    fig, ax = plt.subplots(1, 1)
+    neg_rects = ax.bar([1, 2], [fp, tn], color=['r', 'r'], alpha=0.5, width=0.3,
+                       align='edge', label='Not Reported')
+    pos_rects = ax.bar([1, 2], [tp, fn], color=['g', 'g'], alpha=0.5, width=-0.3,
+                       align='edge', label='Reported')
+    ax.legend(title='Actual Outcome')
+    ax.set_title('Classifications\n(Threshold = 0.55)', fontsize=16)
+    ax.set_xlabel('Predicted Results', fontsize=14)
+    ax.set_ylabel('Samples', fontsize=14)
+    ax.set_xticks([1, 2])
+    ax.set_xticklabels(['Reported', 'Not Reported'])
+    autolabel(neg_rects, ax)
+    autolabel(pos_rects, ax)
     plt.tight_layout()
     if save:
         plt.savefig(fig_name)
     else:
         plt.show()
+
+
+def autolabel(rects, ax):
+    """
+    Attach a text label above each bar displaying its height
+    Parameters
+    ----------
+    rects: matplotlib rectangle object
+        rectangle objects to label
+    ax: matplotlib axis
+        axis containing bar chart
+    """
+    for rect in rects:
+        height = rect.get_height()
+        ax.text(rect.get_x() + rect.get_width() / 2., 1 * height,
+                '%d' % int(height),
+                ha='center', va='bottom')
 
 
 def profit_curve(model, X_test, y_test, cost_matrix, ax, label, color=None,
@@ -638,7 +650,7 @@ def profit_curve(model, X_test, y_test, cost_matrix, ax, label, color=None,
     fig_name: str
         file name for saving plot
     save: bool
-        if true save plot, if false show plot
+        if true save plot
     '''
     fpr, tpr, thresh = model.roc(X_test, y_test)
     thresh[0] = 1
@@ -660,6 +672,8 @@ def profit_curve(model, X_test, y_test, cost_matrix, ax, label, color=None,
     ax.set_xlabel('Threshold')
     ax.set_ylabel('Profit per Sample')
     ax.legend()
+    if save:
+        plt.savefig(fig_name)
     return ax
 
 

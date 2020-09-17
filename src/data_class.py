@@ -57,8 +57,8 @@ class Data(object):
         df = self.filter_cols(filter_type)
         X, y = self.pop_reported(df)
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=test_size, stratify=y, random_state=42
-            )
+            X, y, test_size=test_size, stratify=y, random_state=42,
+            shuffle=True)
         self.test_df = pd.merge(X_test, y_test, how='left',
                                 left_index=True, right_index=True)
         self.train_df = pd.merge(X_train, y_train, how='left',

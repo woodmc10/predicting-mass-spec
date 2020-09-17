@@ -150,7 +150,7 @@ if __name__ == '__main__':
 
     # Create train/test sets
     X, y = Data.pop_reported(all_df.full_df)
-    all_df.train_test_split(test_size=0.25)
+    all_df.train_test_split(test_size=0.33)
     X_train, y_train = all_df.under_sampling(all_df.train_df)
     X_test, y_test = all_df.pop_reported(all_df.test_df)
 
@@ -175,19 +175,20 @@ if __name__ == '__main__':
                                seed=27)
 
     # Compare best models
-    mod_list = [(lr, 'Logistic Regression', 'blue'),
-                (rf, 'Random Forest', 'orange'),
+    mod_list = [(lr, 'Logistic Regression', 'C0'),
+                (rf, 'Random Forest', 'C1'),
                 # (xgb, 'XGBoost Classifier', 'purple'),
                 (grad_boost, 'XG Boost', 'purple')]
     scores, model_list, mod_class_list = compare_models(
         mod_list, f1_score, X_train, X_test, y_train, y_test,
-        fig_name='../images/boost_rand_comp.png', save=False
+        fig_name='../images/model_comp.png', save=False
     )
     print(scores)
-
-    # Pickle XGBoost model
-    pickle_model(mod_class_list[2].model, 'random.pkl')
+    mod_boost = mod_class_list[2]
     '''
+    # Pickle XGBoost model
+    pickle_model(mod_class_list[2].model, 'boosted.pkl')
+
     # plot feature importance and coefs
     # log_reg = model_list[0][0]
     # log_tup = ('green', 'Logistic Regression', 'Coefficient Value')
@@ -208,9 +209,9 @@ if __name__ == '__main__':
     # Confusion Matrix (Bar Chart)
     mod_boost = mod_class_list[2]
     cost_matrix = (0, 0, -1, 0.5)
-    tp, fp, fn, tn = mod_boost.confusion_matrix(X_test, y_test.values, 0.6)
-    confusion_plot(tp, fp, fn, tn, fig_name = '../images/bar_confusion.png',
-                   save=False)
+    tp, fp, fn, tn = mod_boost.confusion_matrix(X_test, y_test.values, 0.55)
+    confusion_plot(tp, fp, fn, tn, fig_name = '../images/bar_conf_single.png',
+                   save=True)
     print(tp, fp, fn, tn)
 
     # List of incorrectly classified chromatograms
@@ -219,8 +220,11 @@ if __name__ == '__main__':
 
     # Profit Curves
     fig, ax = plt.subplots(1)
+    cost_matrix = (0, 0, -1, 0.5)
     profit_curve(mod_boost, X_test, y_test, cost_matrix, ax=ax,
-                 label='XGBoost', fig_name='../images/profit.png', save=False)
+                 label='XGBoost', fig_name='../images/single_prof.png',
+                 save=False)
+    plt.show()
 
     sampling_methods = [all_df.under_sampling(all_df.train_df),
                         all_df.over_sampling(all_df.train_df),
@@ -234,10 +238,10 @@ if __name__ == '__main__':
                         cost_matrix, model_colors,
                         fig_name='../images/profit_curve', save=True)
 
-
-    # X, y = all_df.under_sampling(all_df.full_df)
-    # plot_learning_curve(mod_boost.model, 'Learning Curve', X, y, axes=None,
-    #                     ylim=None, cv=10, n_jobs=-1,
-    #                     train_sizes=np.linspace(.1, 1.0, 10))
-    # plt.savefig('../images/learning.png')
     '''
+    X, y = all_df.under_sampling(all_df.full_df)
+    plot_learning_curve(mod_boost.model, 'Learning Curve', X, y, axes=None,
+                        ylim=(0.5, 1.1), cv=10, n_jobs=-1,
+                        train_sizes=np.linspace(.4, 1.0, 20))
+    plt.savefig('../images/under_learning.png')
+    # plt.show()
