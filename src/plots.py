@@ -173,7 +173,7 @@ def pca_3d(fig, df, X_scale, y, pca_3):
     plt.show()
 
 
-def compound_bar_plot(df, save=False):
+def compound_bar_plot(df, fig_name='plots.png', save=False):
     ''''Plot a stacked bar plot with each bar representing the number of
     data points for each analyte separated into reported and unreported
     Parameters
@@ -181,8 +181,10 @@ def compound_bar_plot(df, save=False):
     df: DataFrame
         dataframe containing analyte column and reported column
         dataframe cannot be onehot encoded
+    fig_name: str
+        name for saving plot
     save: bool
-        if true, save to images folder
+        if true, save to images folder, else show plto
     '''
     compound_group_df = df.groupby(['analyte', 'reported']).count()
     compound_group_df = compound_group_df['Sample Name']
@@ -193,15 +195,18 @@ def compound_bar_plot(df, save=False):
                                + compound_group['Sample Name'][1])
     compound_group.sort_values('total', inplace=True, ascending=False)
     compound_group.pop('total')
-    compound_group.plot(kind='bar', stacked=True, rot=45, color=['r', 'g'],
-                        alpha=0.5, title='Chromatograms by Analyte')
+    compound_group.plot(kind='barh', stacked=True, color=['r', 'g'],
+                        alpha=0.5, figsize=(12, 6))
     plt.xticks(horizontalalignment='right')
-    plt.xlabel('Analyte')
-    plt.ylabel('Chromatograms')
+    plt.ylabel('Analyte', fontsize=14)
+    plt.xlabel('Chromatograms (#)', fontsize=14)
+    plt.title('Chromatograms by Analyte', fontsize=16)
     plt.tight_layout()
     plt.legend(['Not Reported', 'Reported'])
     if save:
-        plt.savefig('../images/compound_bar.png')
+        plt.savefig(fig_name)
+    else:
+        plt.show()
 
 
 def scatter_plots(df, list_pairs, save=False):
@@ -353,6 +358,7 @@ def sort_columns(columns, coefs):
                 'analyte_Spiromesifen': 'Spiromesifen',
                 'analyte_Spirotetramat': 'Spirotetramat',
                 'analyte_Tebuconazole': 'Tebuconazole',
+                'analyte_Abamectin': 'Abamectin',
                 'rt_diff': 'RT Difference',
                 'baseline': 'Baseline Slope'}
     print_cols = []
@@ -395,6 +401,14 @@ def feature_comparison(columns, coefs, features, label_values,
     sort_coefs, sort_no_a_coefs, sort_d_coefs = sort_columns(columns, coefs)
     sort_feat, sort_no_a_feat, sort_d_feat = sort_columns(columns, features)
 
+    # Limit to top 10 features
+    # sort_coefs = sort_coefs[-11:-1]
+    # sort_no_a_coefs = sort_no_a_coefs[-11:-1]
+    # sort_d_coefs = sort_d_coefs[-11:-1]
+    # sort_feat = sort_feat[-11:-1]
+    # sort_no_a_feat = sort_no_a_feat[-11:-1]
+    # sort_d_feat = sort_d_feat[-11:-1]
+
     # Formatting for Logistic Regression
     pos_coefs = [0 if coef < 0 else coef for coef in sort_coefs]
     pos_no_a_coefs = [0 if coef < 0 else coef for coef in sort_no_a_coefs]
@@ -431,7 +445,7 @@ def feature_comparison(columns, coefs, features, label_values,
         order2 = [3, 2]
         axes[0].legend([handles[idx] for idx in order2],
                        [labels[idx] for idx in order2],
-                       loc='lower right', title='Positive Coefficients',
+                       loc='upper right', title='Positive Coefficients',
                        bbox_to_anchor=(1, 0.2))
         legend_title = 'Negative Coefficients'
 
@@ -443,7 +457,6 @@ def feature_comparison(columns, coefs, features, label_values,
     # Right plot
     importance_plot(axes[1], sort_feat, sort_no_a_feat, color2)
     axes[1].set_xlabel(label2, fontsize=14)
-    axes[1].set_yticks(list(range(len(features))))
     axes[1].set_yticklabels(sort_d_feat, fontsize=12)
     axes[1].set_title(title2, fontsize=16)
     handles, labels = plt.gca().get_legend_handles_labels()
@@ -476,7 +489,7 @@ def importance_plot(ax, all_vals, no_analyte, colors):
         axes with plot
     '''
     ax.barh(list(range(len(all_vals))), np.abs(all_vals), color=colors,
-            alpha=0.1, label='Categorical Features')
+            alpha=0.3, label='Categorical Features')
     ax.barh(list(range(len(all_vals))), np.abs(no_analyte), color=colors,
             alpha=0.7, label='Continuous Features')
     ax.set_yticks(list(range(len(all_vals))))
@@ -581,28 +594,30 @@ def confusion_plot(tp, fp, fn, tn, fig_name='plot.png', save=False):
     '''Plot the false positive and false negatives
     Parameters
     ----------
+    tp: int
+        number of true positive classifications
     fp: int
         number of false positive classifications
     fn: int
         number of false negative classifications
+    tn: int
+        number of true negative classifications
     fig_name: str
         file location to save plot
     save: bool
         if true save the plot, if false show the plot
     '''
-    fig, ax = plt.subplots(1, 1)
-    neg_rects = ax.bar([1, 2], [fp, tn], color=['r', 'r'], alpha=0.5, width=0.3,
-                       align='edge', label='Not Reported')
-    pos_rects = ax.bar([1, 2], [tp, fn], color=['g', 'g'], alpha=0.5, width=-0.3,
-                       align='edge', label='Reported')
+    fig, ax = plt.subplots(1, 1, figsize=(12, 6))
+    ax.barh([1, 2], [tp, fn], color=['g', 'g'], alpha=0.5, left=[tn, fp],
+            height=0.3, align='center', label='Reported')
+    ax.barh([1, 2], [tn, fp], color=['r', 'r'], alpha=0.5, left=[0, 0],
+            height=0.3, align='center', label='Not Reported')
     ax.legend(title='Actual Outcome')
     ax.set_title('Classifications\n(Threshold = 0.55)', fontsize=16)
-    ax.set_xlabel('Predicted Results', fontsize=14)
-    ax.set_ylabel('Samples', fontsize=14)
-    ax.set_xticks([1, 2])
-    ax.set_xticklabels(['Reported', 'Not Reported'])
-    autolabel(neg_rects, ax)
-    autolabel(pos_rects, ax)
+    ax.set_ylabel('Predicted Results', fontsize=14)
+    ax.set_xlabel('Chromatgrams (#)', fontsize=14)
+    ax.set_yticks([1, 2])
+    ax.set_yticklabels(['Correct', 'Incorrect'])
     plt.tight_layout()
     if save:
         plt.savefig(fig_name)
@@ -707,7 +722,7 @@ def stack_profit_curves(model_list, sample_list, mod, label_model_list,
     save: bool
         if true save fig, if false show fig
     '''
-    fig, axes = plt.subplots(2, 1, figsize=(6, 8))
+    fig, axes = plt.subplots(2, 1, figsize=(12, 8))
     counter = 0
     for index, mod in enumerate(model_list):
         axes[0] = profit_curve(mod, X_test, y_test, cost_matrix, ax=axes[0],

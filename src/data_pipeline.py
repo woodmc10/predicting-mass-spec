@@ -72,7 +72,7 @@ def analyte_filter(df, analyte='All'):
     '''
     if analyte == 'All':
         # One-hot-encode analytes
-        one_hot_df = pd.get_dummies(df, columns=['analyte'], drop_first=True)
+        one_hot_df = pd.get_dummies(df, columns=['analyte'], drop_first=False)
         # drop_first drops Abamectin
     else:
         # Filter on analyte name

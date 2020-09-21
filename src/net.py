@@ -94,3 +94,16 @@ if __name__ == '__main__':
     # 'weight_constraint': 3, 'neurons1': 15, 'optimizer': 'Adagrad',
     # 'batch_size': 100, 'epochs': 50, 'neurons2': 50,
     # 'activation2': 'softsign'}, 0.655386722306166)
+
+
+    ''' Retraining to try a more complex net
+    #1: same as above for baseline
+        - ({'optimizer': 'Adam', 'init_mode': 'normal', 'activation1': 'relu', 'weight_constraint': 3, 'activation2': 'relu', 'neurons1': 15, 'neurons2': 1, 'dropout_rate': 0.5, 'batch_size': 200, 'epochs': 25}, 0.3989261698735403)
+        - ({'weight_constraint': 4, 'activation2': 'relu', 'neurons2': 5, 'activation1': 'relu', 'dropout_rate': 0.5, 'batch_size': 200, 'optimizer': 'RMSprop', 'init_mode': 'he_normal', 'epochs': 50, 'neurons1': 1}, 0.329937353679581)
+    # 2: double hidden layers (4)
+        - ({'weight_constraint': 2, 'optimizer': 'Adamax', 'neurons2': 25, 'activation1': 'softplus', 'neurons1': 15, 'dropout_rate': 0.5, 'epochs': 25, 'init_mode': 'glorot_uniform', 'batch_size': 100, 'activation2': 'linear'}, 0.4627882599580714)
+        - ({'weight_constraint': 3, 'init_mode': 'uniform', 'batch_size': 500, 'dropout_rate': 0.5, 'epochs': 10, 'activation1': 'softplus', 'neurons1': 50, 'neurons2': 50, 'optimizer': 'Nadam', 'activation2': 'linear'}, 0.4358337754199823)
+    # 3: increase possible values for epochs and neurons
+        - ({'init_mode': 'normal', 'neurons2': 15, 'neurons1': 50, 'activation1': 'softplus', 'weight_constraint': 8, 'epochs': 200, 'batch_size': 100, 'dropout_rate': 0.3, 'optimizer': 'Adamax', 'activation2': 'softplus'}, 0.5009534580885144)
+        - ({'optimizer': 'Nadam', 'dropout_rate': 0.1, 'weight_constraint': 6, 'activation1': 'softsign', 'epochs': 200, 'neurons2': 100, 'batch_size': 100, 'activation2': 'tanh', 'init_mode': 'lecun_uniform', 'neurons1': 5}, 0.5149827328835631)
+    # 4: large increase in hidden layers (20)
