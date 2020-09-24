@@ -99,7 +99,7 @@ Figure 6: ROC curve and F1 score comparison over various thresholds for logistic
 ![importance](images/coef_features.png)
 Figure 7: Coefficient Values and Feature Importances
 
-The coefficients assigned by the logistic regression follow the importance a chemist would put on these features. The peak area is used to calculate the concentration and all of the pesticide have concentration thresholds, where samples are not reported if they do not exceed the threshold. The peak width is part of the calculation for peak area, and thus reltaed to concentration. The difference between the observed retention time and the expected retention time is the highest negative coefficient. This also makes sense because the further the peak is from the expected retention time the less likely it is to be the compound of interest and more likely to be an interference that would not be reported. Peak assymetry and baseline slope are both features that describe the appearance of the peak. These features are likely to increase with noisy peak integration that would be less likely to be reported.
+The coefficients assigned by the logistic regression follow the importance a chemist would put on these features. The peak area is used to calculate the concentration and all of the pesticide have concentration thresholds, where samples are not reported if they do not exceed the threshold. The peak width is part of the calculation for peak area, and thus related to concentration. The difference between the observed retention time and the expected retention time is the highest negative coefficient. This also makes sense because the further the peak is from the expected retention time the less likely it is to be the compound of interest and more likely to be an interference that would not be reported. Peak assymetry and baseline slope are both features that describe the appearance of the peak. These features are likely to increase with noisy peak integration that would be less likely to be reported.
 
 ## Random Forest and XGBoost
 ### Comparison
@@ -115,26 +115,29 @@ The XGBoost model put much more relative importance to the categorical features 
 Figure 9: Feature Importances for XGBoost Classifier and Random Forest Classifier
 
 ## Best Model Evalutaion
-The XGBoost model performed the best. It had the highest F1 score at 0.86 and did the best categorizing the reported chromatograms, only missing 9 reported chromatograms. The following chart shows all of the misclassified samples from the test data.
-
-![bar_confusion](images/bar_confusion.png)
-Figure 10: Bar chart of incorrectly classified chromatograms
-
-This chart was created using the threshold that optimized the F1 score. It is likely that a lab would want to change the threshold used for predictions in order to reduce false negatives, or to reduce false positives. In order to find the best threshold for predictions a profit curve can be used to compare the threshold to a profit. The profit is determined by adding a cost or profit to each of the classifications. For this profit curve all predicted positive samples were assigned a profit of $0. Currently all chromatograms are being visually inspected by a chemist, and if this model is implemented chromatograms that are predicted positive will continue to be inspected. True negatives were assigned a profit of $0.25 because there will be no visual inspection on these chromatograms, saving time. Finally, false negatives were assigned a loss of $1.00, these chromatograms are the ones that should be reported but no chemist evaluates because the model predicts they should not be reported. 
+The XGBoost model performed the best. It had the highest F1 score at 0.86 and did the best categorizing the reported chromatograms, only missing 9 reported chromatograms at the threshold that optimized the F1 score (0.25). It is likely that a lab would want to change the threshold used for predictions in order to reduce false negatives, or to reduce false positives. In order to find the best threshold for predictions a profit curve can be used to compare the threshold to a profit. The profit is determined by adding a cost or profit to each of the classifications. For this profit curve all predicted positive samples were assigned a profit of $0. Currently all chromatograms are being visually inspected by a chemist, and if this model is implemented chromatograms that are predicted positive will continue to be inspected. True negatives were assigned a profit of $0.25 because there will be no visual inspection on these chromatograms, saving time. Finally, false negatives were assigned a loss of $1.00, these chromatograms are the ones that should be reported but no chemist evaluates because the model predicts they should not be reported. 
 
 ![profit_curve](images/profit_curve.png)
-Figure 11: Profit curve comparing profits to thresholds
+Figure 10: Profit curve comparing profits to thresholds
 
-These profit curves show that the best performance from the XGBoost model comes when undersampling is used to adjust for the class imbalance. Undersampling does not result in the best F1 score, but it does the best job of reducing false negatives which are more costly than false positives. Undersampling allows for using a relatively higher threshold of 0.4 without resulting in as many false positives as the other sampling techniques.
+These profit curves show that the best performance from the XGBoost model comes when undersampling is used to adjust for the class imbalance. Undersampling does not result in the best F1 score, but it does the best job of reducing false negatives which are more costly than false positives. Undersampling allows for using a relatively higher threshold of 0.55 without resulting in as many false positives as the other sampling techniques. The following chart shows how well the model performed on the test data.
+
+![bar_confusion](images/compound_long.png)
+Figure 11: Bar chart of classified chromatograms from test data
 
 Since undersampling reduces the number of smaples available for training the model a learning curve was generated to evaluate if more data would improve the model performance. 10 fold cross validation was performed with varying amounts of the data to determine the accuracy of the model when trained with different numbers of data points. Accuracy was used to evaluate the cross validation because the undersampling will result in balanced classes. The learning curve shows that the model is still improving with increasing sample numbers. Thus it would be beneficial to obtain more data for the model to use for training.
 
 ![learning_curve](images/learning.png)
+Figure 12: Learning Curve with undersampling 
 
 
-The following are images of incorrectly classified chromatograms...
+The following are images of incorrectly classified chromatograms and indicate some of the difficulties that this model faces. The false negative is an example of an Abamectin chromatogram and this pesticide is notoriously difficult to detect. the false positive is an example of an interference in the Permethrin chromatogram that is at the wrong retention time. I think this model could eventually learn to correctly identify these chromatograms given more examples of these types of chromatograms in the training data.
 
-- Images of incorrectly classified chromatograms
+![false_neg](images/false_neg_example.png)
+Figure 13: Abamectin False Negative
+
+![false_pos](images/fasle_pos_example.png)
+Figure 14: Permethrin Interference False Positive
 
 
 # Conclusion
@@ -143,5 +146,6 @@ Both the logistic regression and random forest models are capable of classifing 
 This type of classification could be used to reduce the number of chemists required to support operations in a number of labs using chromatographic testing. Even if the lab does not create enough chromatograms to employ chemists full time on visual inspection of data, this model would allow some of the chemist time to be used for lab work, validations or research and development. 
 
 ## Future Work
-- Determine F-statistic and p-values for logistic regressions
-- Identify incorrectly classified chromatograms to determine what is causing problems for the models
+- Deploy a flask app to allow chemist to upload a batch and receive a list of chromatograms to review
+- Work with other chromatographic methods (clinical methods or doping methods)
+- Use validation data for training the model and design experiments to test weaknesses.

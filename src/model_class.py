@@ -237,7 +237,7 @@ if __name__ == '__main__':
     X_test, y_test = all_df.pop_reported(all_df.test_df)
 
     # Find best hyperparameters
-    '''
+
     logistic = LogisticRegression(class_weight='balanced')
     Log = Model(logistic, f1_score)
     distributions = dict(C=uniform(loc=0, scale=4),
@@ -259,7 +259,7 @@ if __name__ == '__main__':
     # ({'max_features': 'auto', 'min_samples_leaf': 0.004338663070259263,
     # 'min_samples_split': 7, 'n_estimators': 200},
     # F1 Score: 0.7767690571695022)
-    '''
+
     grad_boost = XGBClassifier(random_state=43)
     GB = Model(grad_boost, f1_score)
     distributions_gb = dict(eta=[0.01, 0.025, 0.05, 0.075, 0.1, 0.125,
@@ -284,7 +284,7 @@ if __name__ == '__main__':
     # 'reg_alpha': 0.01, 'objective': 'reg:linear', 'min_child_weight': 5,
     # 'max_depth': 5, 'gamma': 0, 'eta': 0.075, 'colsample_by_tree': 1},
     # F1 Score: 0.7961882282491608)
-    '''
+
     # With under sampling
     # ({'subsample': 0.7, 'scale_pos_weight': 2, 'reg_lambda': 0,
     # 'reg_alpha': 0.005, 'objective': 'binary:logistic',
@@ -320,4 +320,4 @@ if __name__ == '__main__':
     print(GB.hyper_search(distributions_gb, X_train, y_train))
     print(cv_results)
     print(cv_results.shape)
-    '''
+

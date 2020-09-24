@@ -173,7 +173,7 @@ def pca_3d(fig, df, X_scale, y, pca_3):
     plt.show()
 
 
-def compound_bar_plot(df, fig_name='plots.png', save=False):
+def compound_bar_plot(df, eval_type, fig_name='plots.png', save=False):
     ''''Plot a stacked bar plot with each bar representing the number of
     data points for each analyte separated into reported and unreported
     Parameters
@@ -181,28 +181,37 @@ def compound_bar_plot(df, fig_name='plots.png', save=False):
     df: DataFrame
         dataframe containing analyte column and reported column
         dataframe cannot be onehot encoded
+    eval_type: str
+        either 'reported' or 'correct'
     fig_name: str
         name for saving plot
     save: bool
         if true, save to images folder, else show plto
     '''
-    compound_group_df = df.groupby(['analyte', 'reported']).count()
+    compound_group_df = df.groupby(['analyte', eval_type]).count()
     compound_group_df = compound_group_df['Sample Name']
-    compound_group_df = compound_group_df.reset_index(level='reported')
-    compound_group = pd.pivot(compound_group_df, columns='reported',
+    compound_group_df = compound_group_df.reset_index(level=eval_type)
+    compound_group = pd.pivot(compound_group_df, columns=eval_type,
                               index=None)
     compound_group['total'] = (compound_group['Sample Name'][0]
                                + compound_group['Sample Name'][1])
     compound_group.sort_values('total', inplace=True, ascending=False)
     compound_group.pop('total')
-    compound_group.plot(kind='barh', stacked=True, color=['r', 'g'],
-                        alpha=0.5, figsize=(12, 6))
+    if eval_type == 'reported':
+        colors = ['purple', 'teal']
+    else:
+        colors = ['r', 'g']
+    compound_group.plot(kind='barh', stacked=True, color=colors,
+                        alpha=0.7, figsize=(12, 6))
     plt.xticks(horizontalalignment='right')
     plt.ylabel('Analyte', fontsize=14)
     plt.xlabel('Chromatograms (#)', fontsize=14)
     plt.title('Chromatograms by Analyte', fontsize=16)
     plt.tight_layout()
-    plt.legend(['Not Reported', 'Reported'])
+    if eval_type == 'reported':
+        plt.legend(['Not Reported', 'Reported'])
+    else:
+        plt.legend(['Incorrect', 'Correct'])
     if save:
         plt.savefig(fig_name)
     else:
@@ -402,12 +411,12 @@ def feature_comparison(columns, coefs, features, label_values,
     sort_feat, sort_no_a_feat, sort_d_feat = sort_columns(columns, features)
 
     # Limit to top 10 features
-    # sort_coefs = sort_coefs[-11:-1]
-    # sort_no_a_coefs = sort_no_a_coefs[-11:-1]
-    # sort_d_coefs = sort_d_coefs[-11:-1]
-    # sort_feat = sort_feat[-11:-1]
-    # sort_no_a_feat = sort_no_a_feat[-11:-1]
-    # sort_d_feat = sort_d_feat[-11:-1]
+    sort_coefs = sort_coefs[-11:-1]
+    sort_no_a_coefs = sort_no_a_coefs[-11:-1]
+    sort_d_coefs = sort_d_coefs[-11:-1]
+    sort_feat = sort_feat[-11:-1]
+    sort_no_a_feat = sort_no_a_feat[-11:-1]
+    sort_d_feat = sort_d_feat[-11:-1]
 
     # Formatting for Logistic Regression
     pos_coefs = [0 if coef < 0 else coef for coef in sort_coefs]
@@ -607,17 +616,17 @@ def confusion_plot(tp, fp, fn, tn, fig_name='plot.png', save=False):
     save: bool
         if true save the plot, if false show the plot
     '''
-    fig, ax = plt.subplots(1, 1, figsize=(12, 6))
-    ax.barh([1, 2], [tp, fn], color=['g', 'g'], alpha=0.5, left=[tn, fp],
-            height=0.3, align='center', label='Reported')
-    ax.barh([1, 2], [tn, fp], color=['r', 'r'], alpha=0.5, left=[0, 0],
-            height=0.3, align='center', label='Not Reported')
-    ax.legend(title='Actual Outcome')
+    fig, ax = plt.subplots(1, 1, figsize=(8, 4))
+    ax.barh([1, 2], [tp, tn], color=['g', 'g'], alpha=0.5, left=[0, 0],
+            align='center', label='Correct')
+    ax.barh([1, 2], [fp, fn], color=['r', 'r'], alpha=0.5, left=[tp, tn],
+            align='center', label='Incorrect')
+    ax.legend()
     ax.set_title('Classifications\n(Threshold = 0.55)', fontsize=16)
-    ax.set_ylabel('Predicted Results', fontsize=14)
-    ax.set_xlabel('Chromatgrams (#)', fontsize=14)
+    ax.set_ylabel('Predictions', fontsize=14)
+    ax.set_xlabel('Chromatograms (#)', fontsize=14)
     ax.set_yticks([1, 2])
-    ax.set_yticklabels(['Correct', 'Incorrect'])
+    ax.set_yticklabels(['Should     \nBe Reported', 'Should Not \nBe Reported'])
     plt.tight_layout()
     if save:
         plt.savefig(fig_name)
@@ -752,11 +761,11 @@ if __name__ == '__main__':
              ('area_ratio', 'height_ratio'),
              ('Analyte Peak Width (min)',
               'Analyte Peak Width at 50% Height (min)')]
-    # scatter_plots(all_df.full_df, pairs, save=False)
+    scatter_plots(all_df.full_df, pairs, save=False)
 
     pca_plots(all_df.full_df)
 
-    # lasso_plot(all_df, pairs)
+    lasso_plot(all_df, pairs)
 
     var_corr = all_df.full_df.corr()
     sns.heatmap(var_corr)

@@ -135,6 +135,9 @@ def incorrect_classifications(X_test, y_test, model, thresh,
     new_df['fn'] = np.where(
         new_df['preds'] == 0, np.where(new_df['reported'] == 1, 1, 0), 0
     )
+    new_df['correct'] = np.where(
+        new_df['fp'] == 0, np.where(new_df['fn'] == 0, 1, 0), 0
+        )
     sample_df = pd.read_csv(sample_file, index_col='Unnamed: 0')
     full_df = merge_df_on_index(new_df, sample_df)
     fp_index = list(new_df[new_df['fp'] == 1].index.values)
@@ -158,7 +161,7 @@ if __name__ == '__main__':
     # Create train/test sets
     X, y = Data.pop_reported(all_df.full_df)
     all_df.train_test_split(test_size=0.33)
-    X_train, y_train = all_df.pop_reported(all_df.train_df)
+    X_train, y_train = all_df.under_sampling(all_df.train_df)
     X_test, y_test = all_df.pop_reported(all_df.test_df)
 
     # Create models from best hyperparameter searches
@@ -192,7 +195,7 @@ if __name__ == '__main__':
     )
     print(scores)
     mod_boost = mod_class_list[2]
-    '''
+
     y_prob = mod_boost.predict_proba(X_test)
     y_df = pd.DataFrame(y_test)
     y_df['prob'] = y_prob[:, 1]
@@ -202,7 +205,7 @@ if __name__ == '__main__':
 
     # Pickle XGBoost model
     pickle_model(mod_class_list[2].model, 'boosted.pkl')
-    '''
+
     # plot feature importance and coefs
     log_reg = model_list[0][0]
     log_tup = ('green', 'Logistic Regression', 'Coefficient Value')
@@ -218,26 +221,26 @@ if __name__ == '__main__':
     feature_comparison(columns, coefs, features2, labels,
                        fig_name='../images/rand_log_features.png',
                        save=False)
-    '''
+
     # Evaluate XGBoost model
     # Confusion Matrix (Bar Chart)
     cost_matrix = (0, 0, -1, 0.5)
     tp, fp, fn, tn = mod_boost.confusion_matrix(X_test, y_test.values, 0.55)
-    confusion_plot(tp, fp, fn, tn, fig_name = '../images/bar_conf_long .png',
+    confusion_plot(tp, fp, fn, tn, fig_name = '../images/bar_conf_long.png',
                    save=False)
     print(tp, fp, fn, tn)
-    
+
     # List of incorrectly classified chromatograms
     fp_df, fn_df, full_df = incorrect_classifications(X_test, y_test,
                                                       mod_boost, 0.4)
     print(fn_df)
     print(fp_df)
     
-    # full_df[full_df['reported'] == 1]['probas'].hist(by=full_df['analyte'])
-    # plt.show()
-    # full_df[full_df['reported'] == 0]['probas'].hist(by=full_df['analyte'])
-    # plt.show()
-    # breakpoint()
+    full_df[full_df['reported'] == 1]['probas'].hist(by=full_df['analyte'])
+    plt.show()
+    full_df[full_df['reported'] == 0]['probas'].hist(by=full_df['analyte'])
+    plt.show()
+
     full_df.sort_values('probas', inplace=True)
     full_df['fn_count'] = full_df.groupby('analyte')['fn'].transform(pd.Series.cumsum)
     full_df['fn_count'].plot()
@@ -271,8 +274,8 @@ if __name__ == '__main__':
     # plt.show()
 
     # Determine class imbalance after undersampling
-    fp_df, fn_df, full_df = incorrect_classifications(X_train, y_train,
+    fp_df, fn_df, full_df = incorrect_classifications(X_test, y_test,
                                                       mod_boost, 0.55)
-    compound_bar_plot(full_df, fig_name='../images/compound_long_under.png',
-                      save=True)
-    '''
+    compound_bar_plot(full_df, 'correct', fig_name='../images/compound_long_preds.png',
+                      save=False)
+    

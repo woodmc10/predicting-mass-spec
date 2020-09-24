@@ -106,4 +106,4 @@ if __name__ == '__main__':
     # 3: increase possible values for epochs and neurons
         - ({'init_mode': 'normal', 'neurons2': 15, 'neurons1': 50, 'activation1': 'softplus', 'weight_constraint': 8, 'epochs': 200, 'batch_size': 100, 'dropout_rate': 0.3, 'optimizer': 'Adamax', 'activation2': 'softplus'}, 0.5009534580885144)
         - ({'optimizer': 'Nadam', 'dropout_rate': 0.1, 'weight_constraint': 6, 'activation1': 'softsign', 'epochs': 200, 'neurons2': 100, 'batch_size': 100, 'activation2': 'tanh', 'init_mode': 'lecun_uniform', 'neurons1': 5}, 0.5149827328835631)
-    # 4: large increase in hidden layers (20)
+    # 4: large increase in hidden layers (20) '''
